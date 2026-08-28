@@ -102,7 +102,7 @@ dtb_name=/amlogic/meson-gxlx-mibox4.dtb
 rtw88 的逻辑为：
 
 1. Realtek 模块自身 eFuse MAC 有效时保持原行为；
-2. 无效时调用 `device_get_mac_address()`，从 Device Tree/NVMEM 获取
+2. 无效时调用 `of_get_mac_address()`，从 Device Tree/NVMEM 获取
    SoC eFuse 中的 WLAN MAC；
 3. 两者均无效时才生成随机地址。
 

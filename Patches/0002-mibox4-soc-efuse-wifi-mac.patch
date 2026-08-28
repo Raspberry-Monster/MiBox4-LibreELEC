@@ -8,8 +8,8 @@ LibreELEC 12.2 branch.
 
 Signed-off-by: MiBox4-LibreELEC contributors
 ---
- ...-rtw88-use-mibox4-soc-efuse-wifi-mac.patch | 111 +++++++++++++++++++
- 1 file changed, 111 insertions(+)
+ ...-rtw88-use-mibox4-soc-efuse-wifi-mac.patch | 104 ++++++++++++++++++
+ 1 file changed, 104 insertions(+)
  create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
 
 diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
@@ -17,7 +17,7 @@ new file mode 100644
 index 0000000000..dfa71960b9
 --- /dev/null
 +++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
-@@ -0,0 +1,111 @@
+@@ -0,0 +1,104 @@
 +From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 +From: MiBox4-LibreELEC contributors
 +Date: Fri, 28 Aug 2026 14:00:00 +0800
@@ -32,15 +32,15 @@ index 0000000000..dfa71960b9
 +an nvmem cell and attach it to the SDIO function using the standard
 +mac-address cell name.
 +
-+Make rtw88 consult device firmware/nvmem before falling back to a random
-+address.  This is useful to any rtw88 device whose board-level address is
-+stored outside the Realtek eFuse.
++Make rtw88 consult the device-tree MAC address before falling back to a
++random address.  This is useful to any rtw88 device whose board-level address
++is stored outside the Realtek eFuse.
 +
 +Signed-off-by: MiBox4-LibreELEC contributors
 +---
 + arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts |  9 +++++++++
-+ drivers/net/wireless/realtek/rtw88/main.c          | 34 ++++++++++++++++++++++++++++++++--
-+ 2 files changed, 41 insertions(+), 2 deletions(-)
++ drivers/net/wireless/realtek/rtw88/main.c          | 27 +++++++++++++++++++++++++++
++ 2 files changed, 36 insertions(+), 2 deletions(-)
 +
 +diff --git a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
 +index 1b457a6..d48d305 100644
@@ -90,39 +90,34 @@ index 0000000000..dfa71960b9
 + 	int ret;
 + 
 + 	mutex_lock(&rtwdev->mutex);
-+@@ -2024,8 +2028,34 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
++@@ -2024,8 +2028,29 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
 + 	efuse->ext_lna_5g = efuse->lna_type_5g & BIT(3) ? 1 : 0;
 + 
 + 	if (!is_valid_ether_addr(efuse->addr)) {
 +-		eth_random_addr(efuse->addr);
 +-		dev_warn(rtwdev->dev, "efuse MAC invalid, using random\n");
-++		mac_ret = device_get_mac_address(rtwdev->dev, (char *)mac_addr);
-++		if (mac_ret) {
-++			dev_warn(rtwdev->dev,
-++				 "device_get_mac_address failed: %d\n", mac_ret);
-++
-++			if (rtwdev->dev->of_node) {
-++				mac_ret = of_get_mac_address(rtwdev->dev->of_node,
+++		if (rtwdev->dev->of_node)
+++			mac_ret = of_get_mac_address(rtwdev->dev->of_node,
 ++						     mac_addr);
-++				if (mac_ret)
-++					dev_warn(rtwdev->dev,
-++						 "of_get_mac_address failed: %d\n",
-++						 mac_ret);
-++			} else {
-++				dev_warn(rtwdev->dev,
-++					 "OF node unavailable for MAC address fallback\n");
-++			}
+++		else {
+++			mac_ret = -ENODEV;
+++			dev_warn(rtwdev->dev,
+++				 "OF node unavailable for MAC address fallback\n");
 ++		}
+++
+++		if (mac_ret)
+++			dev_warn(rtwdev->dev,
+++				 "of_get_mac_address failed: %d\n", mac_ret);
 ++
 ++		if (mac_ret) {
 ++			eth_random_addr(efuse->addr);
 ++			dev_warn(rtwdev->dev,
-++				 "efuse and firmware MAC invalid, using random (error: %d)\n",
+++				 "efuse and OF MAC invalid, using random (error: %d)\n",
 ++				 mac_ret);
 ++		} else {
 ++			ether_addr_copy(efuse->addr, mac_addr);
 ++			dev_info(rtwdev->dev,
-++				 "using MAC address from device firmware\n");
+++				 "using MAC address from device tree\n");
 ++		}
 + 	}
 + 
