@@ -1,0 +1,139 @@
+diff --git a/arch/arm64/boot/dts/amlogic/Makefile b/arch/arm64/boot/dts/amlogic/Makefile
+index 249594fc91d5..029c921ecf1a 100644
+--- a/arch/arm64/boot/dts/amlogic/Makefile
++++ b/arch/arm64/boot/dts/amlogic/Makefile
+@@ -43,6 +43,7 @@ dtb-$(CONFIG_ARCH_MESON) += meson-gxl-s905x-nexbox-a95x.dtb
+ dtb-$(CONFIG_ARCH_MESON) += meson-gxl-s905x-p212.dtb
+ dtb-$(CONFIG_ARCH_MESON) += meson-gxl-s905x-vero4k.dtb
+ dtb-$(CONFIG_ARCH_MESON) += meson-gxlx-s905l-p271.dtb
++dtb-$(CONFIG_ARCH_MESON) += meson-gxlx-mibox4.dtb
+ dtb-$(CONFIG_ARCH_MESON) += meson-gxm-gt1-ultimate.dtb
+ dtb-$(CONFIG_ARCH_MESON) += meson-gxm-khadas-vim2.dtb
+ dtb-$(CONFIG_ARCH_MESON) += meson-gxm-mecool-kiii-pro.dtb
+diff --git a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
+new file mode 100644
+index 0000000..660271f
+--- /dev/null
++++ b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
+@@ -0,0 +1,121 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Xiaomi Mi Box 4 (MDZ-21-AA), derived from the mainline P271 board file.
++ *
++ * The vendor DTB (mibox4_gxl_tf_2g.dtb) is a legacy, monolithic Amlogic
++ * device tree.  Its SoC-wide nodes are already provided by the mainline
++ * meson-gxl*.dtsi files; only board data and properties with mainline
++ * bindings are kept here.  In particular, the vendor multimedia, efuse,
++ * unifykey and aml_wifi nodes are intentionally not copied: those drivers
++ * are not mainline bindings.
++ */
++
++/dts-v1/;
++
++#include "meson-gxl-s905x.dtsi"
++#include "meson-gx-p23x-q20x.dtsi"
++
++/ {
++	compatible = "xiaomi,mibox4", "amlogic,p271", "amlogic,s905l",
++		     "amlogic,meson-gxlx";
++	model = "Xiaomi Mi Box 4 (MDZ-21-AA)";
++
++	/* gxl_tf_2g in the extracted vendor DTB: 2 GiB RAM. */
++	memory@0 {
++		device_type = "memory";
++		reg = <0x0 0x0 0x0 0x80000000>;
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	sound {
++		model = "P271";
++	};
++
++	/*
++	 * RTL8723DS power/reset sequencing.
++	 *
++	 * The vendor DT uses the legacy linear GPIO number 0x58, which maps
++	 * to GPIOX_9 on the mainline GXL GPIO controller.
++	 */
++	wifi_pwrseq: wifi-pwrseq {
++		compatible = "mmc-pwrseq-simple";
++		reset-gpios = <&gpio GPIOX_9 GPIO_ACTIVE_LOW>;
++		clocks = <&wifi32k>;
++		clock-names = "ext_clock";
++		post-power-on-delay-ms = <200>;
++	};
++};
++
++/* Mali 450-MP2; interrupt layout is identical to the P271 reference board. */
++&apb {
++	mali: gpu@c0000 {
++		interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
++			<GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
++			<GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
++			<GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
++			<GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
++			<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
++			<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
++			<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "gp", "gpmmu", "pp", "pmu",
++			"pp0", "ppmmu0", "pp1", "ppmmu1";
++	};
++};
++
++/* The Mi Box has no host-facing USB gadget port. */
++&usb {
++	dr_mode = "host";
++};
++
++/* GXLX-specific peripheral compatibles required by mainline drivers. */
++&saradc {
++	compatible = "amlogic,meson-gxlx-saradc", "amlogic,meson-saradc";
++};
++
++&vdec {
++	compatible = "amlogic,gxlx-vdec", "amlogic,gx-vdec";
++};
++
++/* The Mi Box 4 has neither an Ethernet connector nor an SD card slot. */
++&ethmac {
++	status = "disabled";
++};
++
++&sd_emmc_b {
++	status = "disabled";
++};
++
++/*
++ * On-board eMMC and the soldered Wi-Fi SDIO module are enabled by the
++ * meson-gxl base dtsi.  Keep the bus capabilities discovered in the vendor
++ * DTB, using standard MMC bindings only.
++ */
++&sd_emmc_c {
++	status = "okay";
++	bus-width = <8>;
++	non-removable;
++	cap-mmc-highspeed;
++	mmc-hs200-1_8v;
++	mmc-hs400-1_8v;
++};
++
++&sd_emmc_a {
++	status = "okay";
++	bus-width = <4>;
++	non-removable;
++	cap-sd-highspeed;
++	keep-power-in-suspend;
++	mmc-pwrseq = <&wifi_pwrseq>;
++
++	/* SDIO function 1 is the RTL8723DS WLAN device. */
++	rtl8723ds: wifi@1 {
++		reg = <1>;
++		interrupt-parent = <&gpio_intc>;
++		/* vendor GPIO 0x56 = GPIOX_7 = GPIO interrupt 96 */
++		interrupts = <96 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "host-wake";
++	};
++};

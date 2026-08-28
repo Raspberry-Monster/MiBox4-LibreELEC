@@ -1,0 +1,4 @@
+Install Dependencies
+PROJECT=Amlogic ARCH=aarch64 DEVICE=AMLGX UBOOT_SYSTEM=box tools/download-tool
+Make Image
+PROJECT=Amlogic ARCH=aarch64 DEVICE=AMLGX UBOOT_SYSTEM=box make image
