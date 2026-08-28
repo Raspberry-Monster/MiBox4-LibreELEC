@@ -186,10 +186,10 @@ index df66256728..e00d6f4072 100644
 
 diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
 new file mode 100644
-index 0000000000..0000000000
+index 0000000000..dfa71960b9
 --- /dev/null
 +++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
-@@ -0,0 +1,92 @@
+@@ -0,0 +1,111 @@
 +From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 +From: MiBox4-LibreELEC contributors
 +Date: Fri, 28 Aug 2026 14:00:00 +0800
@@ -211,11 +211,11 @@ index 0000000000..0000000000
 +Signed-off-by: MiBox4-LibreELEC contributors
 +---
 + arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts |  9 +++++++++
-+ drivers/net/wireless/realtek/rtw88/main.c          | 15 +++++++++++++--
-+ 2 files changed, 22 insertions(+), 2 deletions(-)
++ drivers/net/wireless/realtek/rtw88/main.c          | 34 ++++++++++++++++++++++++++++++++--
++ 2 files changed, 41 insertions(+), 2 deletions(-)
 +
 +diff --git a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
-+index 660271f00000..000000000000 100644
++index 1b457a6..d48d305 100644
 +--- a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
 ++++ b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
 +@@ -79,6 +79,13 @@ &vdec {
@@ -242,18 +242,19 @@ index 0000000000..0000000000
 + 		interrupts = <96 IRQ_TYPE_LEVEL_HIGH>;
 + 		interrupt-names = "host-wake";
 +diff --git a/drivers/net/wireless/realtek/rtw88/main.c b/drivers/net/wireless/realtek/rtw88/main.c
-+index 000000000000..000000000000 100644
++index c4de5d1..6cc40ed 100644
 +--- a/drivers/net/wireless/realtek/rtw88/main.c
 ++++ b/drivers/net/wireless/realtek/rtw88/main.c
-+@@ -3,6 +3,7 @@
-+ /* Copyright(c) 2018-2019  Realtek Corporation
++@@ -3,6 +3,8 @@
 +  */
 + 
 + #include <linux/devcoredump.h>
 ++#include <linux/etherdevice.h>
+++#include <linux/of_net.h>
 + 
 + #include "main.h"
-+@@ -1974,5 +1975,7 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
++ #include "regd.h"
++@@ -1974,5 +1976,7 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
 + {
 + 	struct rtw_efuse *efuse = &rtwdev->efuse;
 ++	u8 mac_addr[ETH_ALEN];
@@ -261,7 +262,7 @@ index 0000000000..0000000000
 + 	int ret;
 + 
 + 	mutex_lock(&rtwdev->mutex);
-+@@ -2024,8 +2027,16 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
++@@ -2024,8 +2028,34 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
 + 	efuse->ext_lna_5g = efuse->lna_type_5g & BIT(3) ? 1 : 0;
 + 
 + 	if (!is_valid_ether_addr(efuse->addr)) {
@@ -269,9 +270,27 @@ index 0000000000..0000000000
 +-		dev_warn(rtwdev->dev, "efuse MAC invalid, using random\n");
 ++		mac_ret = device_get_mac_address(rtwdev->dev, (char *)mac_addr);
 ++		if (mac_ret) {
+++			dev_warn(rtwdev->dev,
+++				 "device_get_mac_address failed: %d\n", mac_ret);
+++
+++			if (rtwdev->dev->of_node) {
+++				mac_ret = of_get_mac_address(rtwdev->dev->of_node,
+++						     mac_addr);
+++				if (mac_ret)
+++					dev_warn(rtwdev->dev,
+++						 "of_get_mac_address failed: %d\n",
+++						 mac_ret);
+++			} else {
+++				dev_warn(rtwdev->dev,
+++					 "OF node unavailable for MAC address fallback\n");
+++			}
+++		}
+++
+++		if (mac_ret) {
 ++			eth_random_addr(efuse->addr);
 ++			dev_warn(rtwdev->dev,
-++				 "efuse and firmware MAC invalid, using random\n");
+++				 "efuse and firmware MAC invalid, using random (error: %d)\n",
+++				 mac_ret);
 ++		} else {
 ++			ether_addr_copy(efuse->addr, mac_addr);
 ++			dev_info(rtwdev->dev,
@@ -523,5 +542,3 @@ index cd76b47..6939ad7 100755
      do_help
 -- 
 2.51.0
-
-
