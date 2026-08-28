@@ -1,0 +1,116 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MiBox4-LibreELEC contributors
+Date: Fri, 28 Aug 2026 15:00:00 +0800
+Subject: [PATCH] Amlogic: use Mi Box 4 SoC eFuse WiFi MAC
+
+Install the Mi Box 4 MAC fix in the AMLGX kernel patch set used by the
+LibreELEC 12.2 branch.
+
+Signed-off-by: MiBox4-LibreELEC contributors
+---
+ ...-rtw88-use-mibox4-soc-efuse-wifi-mac.patch | 92 +++++++++++++++++++
+ 1 file changed, 92 insertions(+)
+ create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
+
+diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
+new file mode 100644
+index 0000000000..0000000000
+--- /dev/null
++++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
+@@ -0,0 +1,92 @@
++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
++From: MiBox4-LibreELEC contributors
++Date: Fri, 28 Aug 2026 14:00:00 +0800
++Subject: [PATCH] wifi: rtw88: use Mi Box 4 SoC eFuse MAC address
++
++The RTL8723DS module in Xiaomi Mi Box 4 does not expose a valid address in
++the eFuse map consumed by rtw88.  rtw88 consequently creates a new random
++address on every probe.
++
++The vendor device tree identifies the board WLAN address as the six-byte
++mac_wifi key at offset 0x0c in the Meson GX SoC eFuse. Describe that area as
++an nvmem cell and attach it to the SDIO function using the standard
++mac-address cell name.
++
++Make rtw88 consult device firmware/nvmem before falling back to a random
++address.  This is useful to any rtw88 device whose board-level address is
++stored outside the Realtek eFuse.
++
++Signed-off-by: MiBox4-LibreELEC contributors
++---
++ arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts |  9 +++++++++
++ drivers/net/wireless/realtek/rtw88/main.c          | 15 +++++++++++++--
++ 2 files changed, 22 insertions(+), 2 deletions(-)
++
++diff --git a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
++index 660271f00000..000000000000 100644
++--- a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
+++++ b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
++@@ -79,6 +79,13 @@ &vdec {
++ 	compatible = "amlogic,gxlx-vdec", "amlogic,gx-vdec";
++ };
++ 
+++/* WLAN MAC stored by the vendor boot firmware in the SoC eFuse. */
+++&efuse {
+++	wifi_mac: wifi-mac@c {
+++		reg = <0x0c 0x06>;
+++	};
+++};
+++
++ /* The Mi Box 4 has neither an Ethernet connector nor an SD card slot. */
++ &ethmac {
++ 	status = "disabled";
++@@ -114,6 +121,8 @@ &sd_emmc_a {
++ 	rtl8723ds: wifi@1 {
++ 		reg = <1>;
+++		nvmem-cells = <&wifi_mac>;
+++		nvmem-cell-names = "mac-address";
++ 		interrupt-parent = <&gpio_intc>;
++ 		/* vendor GPIO 0x56 = GPIOX_7 = GPIO interrupt 96 */
++ 		interrupts = <96 IRQ_TYPE_LEVEL_HIGH>;
++ 		interrupt-names = "host-wake";
++diff --git a/drivers/net/wireless/realtek/rtw88/main.c b/drivers/net/wireless/realtek/rtw88/main.c
++index 000000000000..000000000000 100644
++--- a/drivers/net/wireless/realtek/rtw88/main.c
+++++ b/drivers/net/wireless/realtek/rtw88/main.c
++@@ -3,6 +3,7 @@
++ /* Copyright(c) 2018-2019  Realtek Corporation
++  */
++ 
++ #include <linux/devcoredump.h>
+++#include <linux/etherdevice.h>
++ 
++ #include "main.h"
++@@ -1974,5 +1975,7 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
++ {
++ 	struct rtw_efuse *efuse = &rtwdev->efuse;
+++	u8 mac_addr[ETH_ALEN];
+++	int mac_ret;
++ 	int ret;
++ 
++ 	mutex_lock(&rtwdev->mutex);
++@@ -2024,8 +2027,16 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
++ 	efuse->ext_lna_5g = efuse->lna_type_5g & BIT(3) ? 1 : 0;
++ 
++ 	if (!is_valid_ether_addr(efuse->addr)) {
++-		eth_random_addr(efuse->addr);
++-		dev_warn(rtwdev->dev, "efuse MAC invalid, using random\n");
+++		mac_ret = device_get_mac_address(rtwdev->dev, (char *)mac_addr);
+++		if (mac_ret) {
+++			eth_random_addr(efuse->addr);
+++			dev_warn(rtwdev->dev,
+++				 "efuse and firmware MAC invalid, using random\n");
+++		} else {
+++			ether_addr_copy(efuse->addr, mac_addr);
+++			dev_info(rtwdev->dev,
+++				 "using MAC address from device firmware\n");
+++		}
++ 	}
++ 
++ out_disable:
++-- 
++2.51.0
+-- 
+2.51.0
+
+

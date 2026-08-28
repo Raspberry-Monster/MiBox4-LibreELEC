@@ -5,17 +5,17 @@ Subject: [PATCH] arm64: dts: amlogic: add RTL8723DS and MiBox 4
 
 Signed-off-by: Raspberry-Monster <lele2194512339@outlook.com>
 ---
- ...rm64-dts-add-xiaomi-mibox4-rtl8723ds.patch | 139 ++++++++++++++
+ ...-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch | 139 ++++++++++++++
  projects/Amlogic/config/kernel-firmware.dat   |   1 +
  projects/Amlogic/linux/linux.aarch64.conf     |   2 +-
  3 files changed, 141 insertions(+), 1 deletion(-)
- create mode 100644 packages/linux/patches/amlogic/0001-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
+ create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
 
-diff --git a/packages/linux/patches/amlogic/0001-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch b/packages/linux/patches/amlogic/0001-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
+diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
 new file mode 100644
 index 0000000000..ea9a4c7173
 --- /dev/null
-+++ b/packages/linux/patches/amlogic/0001-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
++++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
 @@ -0,0 +1,139 @@
 +diff --git a/arch/arm64/boot/dts/amlogic/Makefile b/arch/arm64/boot/dts/amlogic/Makefile
 +index 249594fc91d5..029c921ecf1a 100644
@@ -183,3 +183,5 @@ index df66256728..e00d6f4072 100644
  # CONFIG_RTW88_8821CE is not set
 -- 
 2.53.0
+
+

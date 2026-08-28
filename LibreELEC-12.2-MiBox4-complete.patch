@@ -1,0 +1,527 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MiBox4-LibreELEC contributors
+Date: Fri, 28 Aug 2026 18:00:00 +0800
+Subject: [PATCH] LibreELEC 12.2: add complete Xiaomi Mi Box 4 support
+
+Add Xiaomi Mi Box 4 (MDZ-21-AA) device tree and RTL8723DS support,
+read the stable WLAN MAC address from the Meson SoC eFuse through NVMEM,
+and add a bootloader-preserving EMMCTool installation path.
+
+This patch is intended for the LibreELEC libreelec-12.2 source tree.
+
+Signed-off-by: MiBox4-LibreELEC contributors
+---
+diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
+new file mode 100644
+index 0000000000..ea9a4c7173
+--- /dev/null
++++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
+@@ -0,0 +1,139 @@
++diff --git a/arch/arm64/boot/dts/amlogic/Makefile b/arch/arm64/boot/dts/amlogic/Makefile
++index 249594fc91d5..029c921ecf1a 100644
++--- a/arch/arm64/boot/dts/amlogic/Makefile
+++++ b/arch/arm64/boot/dts/amlogic/Makefile
++@@ -43,6 +43,7 @@ dtb-$(CONFIG_ARCH_MESON) += meson-gxl-s905x-nexbox-a95x.dtb
++ dtb-$(CONFIG_ARCH_MESON) += meson-gxl-s905x-p212.dtb
++ dtb-$(CONFIG_ARCH_MESON) += meson-gxl-s905x-vero4k.dtb
++ dtb-$(CONFIG_ARCH_MESON) += meson-gxlx-s905l-p271.dtb
+++dtb-$(CONFIG_ARCH_MESON) += meson-gxlx-mibox4.dtb
++ dtb-$(CONFIG_ARCH_MESON) += meson-gxm-gt1-ultimate.dtb
++ dtb-$(CONFIG_ARCH_MESON) += meson-gxm-khadas-vim2.dtb
++ dtb-$(CONFIG_ARCH_MESON) += meson-gxm-mecool-kiii-pro.dtb
++diff --git a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
++new file mode 100644
++index 0000000..660271f
++--- /dev/null
+++++ b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
++@@ -0,0 +1,121 @@
+++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++/*
+++ * Xiaomi Mi Box 4 (MDZ-21-AA), derived from the mainline P271 board file.
+++ *
+++ * The vendor DTB (mibox4_gxl_tf_2g.dtb) is a legacy, monolithic Amlogic
+++ * device tree.  Its SoC-wide nodes are already provided by the mainline
+++ * meson-gxl*.dtsi files; only board data and properties with mainline
+++ * bindings are kept here.  In particular, the vendor multimedia, efuse,
+++ * unifykey and aml_wifi nodes are intentionally not copied: those drivers
+++ * are not mainline bindings.
+++ */
+++
+++/dts-v1/;
+++
+++#include "meson-gxl-s905x.dtsi"
+++#include "meson-gx-p23x-q20x.dtsi"
+++
+++/ {
+++	compatible = "xiaomi,mibox4", "amlogic,p271", "amlogic,s905l",
+++		     "amlogic,meson-gxlx";
+++	model = "Xiaomi Mi Box 4 (MDZ-21-AA)";
+++
+++	/* gxl_tf_2g in the extracted vendor DTB: 2 GiB RAM. */
+++	memory@0 {
+++		device_type = "memory";
+++		reg = <0x0 0x0 0x0 0x80000000>;
+++	};
+++
+++	chosen {
+++		stdout-path = "serial0:115200n8";
+++	};
+++
+++	sound {
+++		model = "P271";
+++	};
+++
+++	/*
+++	 * RTL8723DS power/reset sequencing.
+++	 *
+++	 * The vendor DT uses the legacy linear GPIO number 0x58, which maps
+++	 * to GPIOX_9 on the mainline GXL GPIO controller.
+++	 */
+++	wifi_pwrseq: wifi-pwrseq {
+++		compatible = "mmc-pwrseq-simple";
+++		reset-gpios = <&gpio GPIOX_9 GPIO_ACTIVE_LOW>;
+++		clocks = <&wifi32k>;
+++		clock-names = "ext_clock";
+++		post-power-on-delay-ms = <200>;
+++	};
+++};
+++
+++/* Mali 450-MP2; interrupt layout is identical to the P271 reference board. */
+++&apb {
+++	mali: gpu@c0000 {
+++		interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
+++			<GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
+++			<GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
+++			<GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+++			<GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+++			<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
+++			<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
+++			<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+++		interrupt-names = "gp", "gpmmu", "pp", "pmu",
+++			"pp0", "ppmmu0", "pp1", "ppmmu1";
+++	};
+++};
+++
+++/* The Mi Box has no host-facing USB gadget port. */
+++&usb {
+++	dr_mode = "host";
+++};
+++
+++/* GXLX-specific peripheral compatibles required by mainline drivers. */
+++&saradc {
+++	compatible = "amlogic,meson-gxlx-saradc", "amlogic,meson-saradc";
+++};
+++
+++&vdec {
+++	compatible = "amlogic,gxlx-vdec", "amlogic,gx-vdec";
+++};
+++
+++/* The Mi Box 4 has neither an Ethernet connector nor an SD card slot. */
+++&ethmac {
+++	status = "disabled";
+++};
+++
+++&sd_emmc_b {
+++	status = "disabled";
+++};
+++
+++/*
+++ * On-board eMMC and the soldered Wi-Fi SDIO module are enabled by the
+++ * meson-gxl base dtsi.  Keep the bus capabilities discovered in the vendor
+++ * DTB, using standard MMC bindings only.
+++ */
+++&sd_emmc_c {
+++	status = "okay";
+++	bus-width = <8>;
+++	non-removable;
+++	cap-mmc-highspeed;
+++	mmc-hs200-1_8v;
+++	mmc-hs400-1_8v;
+++};
+++
+++&sd_emmc_a {
+++	status = "okay";
+++	bus-width = <4>;
+++	non-removable;
+++	cap-sd-highspeed;
+++	keep-power-in-suspend;
+++	mmc-pwrseq = <&wifi_pwrseq>;
+++
+++	/* SDIO function 1 is the RTL8723DS WLAN device. */
+++	rtl8723ds: wifi@1 {
+++		reg = <1>;
+++		interrupt-parent = <&gpio_intc>;
+++		/* vendor GPIO 0x56 = GPIOX_7 = GPIO interrupt 96 */
+++		interrupts = <96 IRQ_TYPE_LEVEL_HIGH>;
+++		interrupt-names = "host-wake";
+++	};
+++};
+diff --git a/projects/Amlogic/config/kernel-firmware.dat b/projects/Amlogic/config/kernel-firmware.dat
+index c3c1fb2798..b5b7d7b67e 100644
+--- a/projects/Amlogic/config/kernel-firmware.dat
++++ b/projects/Amlogic/config/kernel-firmware.dat
+@@ -12,6 +12,7 @@ rtlwifi/rtl8192cufw.bin
+ rtlwifi/rtl8192cufw.bin
+ rtlwifi/rtl8192eu_nic.bin
+ rtlwifi/rtl8723bs_nic.bin
++rtw88/rtw8723d_fw.bin
+ rtw88/rtw8821c_fw.bin
+ rtw88/rtw8822c_fw.bin
+ rtw88/rtw8822c_wow_fw.bin
+diff --git a/projects/Amlogic/linux/linux.aarch64.conf b/projects/Amlogic/linux/linux.aarch64.conf
+index df66256728..e00d6f4072 100644
+--- a/projects/Amlogic/linux/linux.aarch64.conf
++++ b/projects/Amlogic/linux/linux.aarch64.conf
+@@ -2700,7 +2700,7 @@ CONFIG_RTW88_8822BU=m
+ CONFIG_RTW88_8822CS=m
+ CONFIG_RTW88_8822CU=m
+ # CONFIG_RTW88_8723DE is not set
+-# CONFIG_RTW88_8723DS is not set
++CONFIG_RTW88_8723DS=m
+ # CONFIG_RTW88_8723CS is not set
+ CONFIG_RTW88_8723DU=m
+ # CONFIG_RTW88_8821CE is not set
+-- 
+2.53.0
+
+diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
+new file mode 100644
+index 0000000000..0000000000
+--- /dev/null
++++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
+@@ -0,0 +1,92 @@
++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
++From: MiBox4-LibreELEC contributors
++Date: Fri, 28 Aug 2026 14:00:00 +0800
++Subject: [PATCH] wifi: rtw88: use Mi Box 4 SoC eFuse MAC address
++
++The RTL8723DS module in Xiaomi Mi Box 4 does not expose a valid address in
++the eFuse map consumed by rtw88.  rtw88 consequently creates a new random
++address on every probe.
++
++The vendor device tree identifies the board WLAN address as the six-byte
++mac_wifi key at offset 0x0c in the Meson GX SoC eFuse. Describe that area as
++an nvmem cell and attach it to the SDIO function using the standard
++mac-address cell name.
++
++Make rtw88 consult device firmware/nvmem before falling back to a random
++address.  This is useful to any rtw88 device whose board-level address is
++stored outside the Realtek eFuse.
++
++Signed-off-by: MiBox4-LibreELEC contributors
++---
++ arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts |  9 +++++++++
++ drivers/net/wireless/realtek/rtw88/main.c          | 15 +++++++++++++--
++ 2 files changed, 22 insertions(+), 2 deletions(-)
++
++diff --git a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
++index 660271f00000..000000000000 100644
++--- a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
+++++ b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
++@@ -79,6 +79,13 @@ &vdec {
++ 	compatible = "amlogic,gxlx-vdec", "amlogic,gx-vdec";
++ };
++ 
+++/* WLAN MAC stored by the vendor boot firmware in the SoC eFuse. */
+++&efuse {
+++	wifi_mac: wifi-mac@c {
+++		reg = <0x0c 0x06>;
+++	};
+++};
+++
++ /* The Mi Box 4 has neither an Ethernet connector nor an SD card slot. */
++ &ethmac {
++ 	status = "disabled";
++@@ -114,6 +121,8 @@ &sd_emmc_a {
++ 	rtl8723ds: wifi@1 {
++ 		reg = <1>;
+++		nvmem-cells = <&wifi_mac>;
+++		nvmem-cell-names = "mac-address";
++ 		interrupt-parent = <&gpio_intc>;
++ 		/* vendor GPIO 0x56 = GPIOX_7 = GPIO interrupt 96 */
++ 		interrupts = <96 IRQ_TYPE_LEVEL_HIGH>;
++ 		interrupt-names = "host-wake";
++diff --git a/drivers/net/wireless/realtek/rtw88/main.c b/drivers/net/wireless/realtek/rtw88/main.c
++index 000000000000..000000000000 100644
++--- a/drivers/net/wireless/realtek/rtw88/main.c
+++++ b/drivers/net/wireless/realtek/rtw88/main.c
++@@ -3,6 +3,7 @@
++ /* Copyright(c) 2018-2019  Realtek Corporation
++  */
++ 
++ #include <linux/devcoredump.h>
+++#include <linux/etherdevice.h>
++ 
++ #include "main.h"
++@@ -1974,5 +1975,7 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
++ {
++ 	struct rtw_efuse *efuse = &rtwdev->efuse;
+++	u8 mac_addr[ETH_ALEN];
+++	int mac_ret;
++ 	int ret;
++ 
++ 	mutex_lock(&rtwdev->mutex);
++@@ -2024,8 +2027,16 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
++ 	efuse->ext_lna_5g = efuse->lna_type_5g & BIT(3) ? 1 : 0;
++ 
++ 	if (!is_valid_ether_addr(efuse->addr)) {
++-		eth_random_addr(efuse->addr);
++-		dev_warn(rtwdev->dev, "efuse MAC invalid, using random\n");
+++		mac_ret = device_get_mac_address(rtwdev->dev, (char *)mac_addr);
+++		if (mac_ret) {
+++			eth_random_addr(efuse->addr);
+++			dev_warn(rtwdev->dev,
+++				 "efuse and firmware MAC invalid, using random\n");
+++		} else {
+++			ether_addr_copy(efuse->addr, mac_addr);
+++			dev_info(rtwdev->dev,
+++				 "using MAC address from device firmware\n");
+++		}
++ 	}
++ 
++ out_disable:
++-- 
++2.51.0
+-- 
+2.51.0
+
+diff --git a/packages/tools/emmctool/scripts/emmctool b/packages/tools/emmctool/scripts/emmctool
+index cd76b47..6939ad7 100755
+--- a/packages/tools/emmctool/scripts/emmctool
++++ b/packages/tools/emmctool/scripts/emmctool
+@@ -3,15 +3,25 @@
+ # SPDX-License-Identifier: GPL-2.0
+ # Copyright (C) 2019-present Team LibreELEC (https://libreelec.tv)
+ 
++set -o pipefail
++
+ # ** !!! WARNING !!! WARNING !!! WARNING !!! WARNING !!! WARNING !!! **
+ # This script is not supported on generic box devices. If you choose to
+ # modify it to run on other hardware and you brick your device you will
+ # receive no support to restore your device. You have been warned!
+ 
+ do_backup(){
++  if [ -z "${2}" ]; then
++    echo "error: backup filename is missing"
++    exit 1
++  fi
+   do_umount
+   echo "info: compressing ${EMMC} to ${2}, this will take time"
+-  dd if="${EMMC}" | gzip > of="${2}"
++  if ! dd if="${EMMC}" | gzip > "${2}"; then
++    rm -f "${2}"
++    echo "error: backup failed"
++    exit 1
++  fi
+   echo "info: compressing completed"
+ }
+ 
+@@ -138,6 +148,160 @@ do_umount(){
+   done
+ }
+ 
++mibox4_fail(){
++  echo "error: $*"
++  exit 1
++}
++
++mibox4_validate(){
++  [ "$(dtname)" = "xiaomi,mibox4" ] || \
++    mibox4_fail "the Mi Box 4 installer was invoked on $(dtname)"
++
++  [ -f /flash/KERNEL ] || mibox4_fail "/flash/KERNEL is missing"
++  [ -f /flash/s905_autoscript ] || \
++    mibox4_fail "/flash/s905_autoscript is missing"
++  [ -f /flash/emmc_autoscript ] || \
++    mibox4_fail "/flash/emmc_autoscript is missing"
++  [ -f /flash/amlogic/meson-gxlx-mibox4.dtb ] || \
++    mibox4_fail "the Mi Box 4 DTB is missing from /flash/amlogic"
++
++  BOOT_MAGIC=$(dd if="${EMMC}" bs=1 skip=528 count=4 2>/dev/null)
++  MPT_MAGIC=$(dd if="${EMMC}" bs=1 skip=4194304 count=3 2>/dev/null)
++  [ "${BOOT_MAGIC}" = "@AML" ] || \
++    mibox4_fail "signed Amlogic boot container not found at 0x210"
++  [ "${MPT_MAGIC}" = "MPT" ] || \
++    mibox4_fail "Amlogic MPT not found at 4 MiB"
++
++  EMMC_SIZE=$(blockdev --getsize64 "${EMMC}")
++  [ "${EMMC_SIZE}" -ge 3221225472 ] || \
++    mibox4_fail "eMMC is smaller than the 3 GiB safety minimum"
++
++  AVAILABLE_KIB=$(df -Pk /storage | awk 'NR == 2 { print $4 }')
++  [ -n "${AVAILABLE_KIB}" ] || \
++    mibox4_fail "could not determine free space on USB /storage"
++  [ "${AVAILABLE_KIB}" -ge 614400 ] || \
++    mibox4_fail "USB /storage needs at least 600 MiB free for the backup"
++}
++
++mibox4_backup(){
++  BACKUP_STAMP=$(date +%Y%m%d-%H%M%S)
++  BACKUP_PREFIX="/storage/mibox4-emmc-${BACKUP_STAMP}"
++  BACKUP_USER="${BACKUP_PREFIX}-first512M.img.gz"
++
++  echo "info: backing up the original first 512 MiB to ${BACKUP_USER}"
++  if ! dd if="${EMMC}" bs=1M count=512 | gzip > "${BACKUP_USER}"; then
++    rm -f "${BACKUP_USER}"
++    mibox4_fail "could not create the mandatory boot-chain backup"
++  fi
++
++  for area in boot0 boot1; do
++    device="${EMMC}${area}"
++    backup="${BACKUP_PREFIX}-${area}.img.gz"
++    if [ -b "${device}" ]; then
++      echo "info: backing up ${device} to ${backup}"
++      if ! dd if="${device}" | gzip > "${backup}"; then
++        rm -f "${backup}"
++        mibox4_fail "could not back up ${device}"
++      fi
++    fi
++  done
++  sync
++}
++
++mibox4_wait_partitions(){
++  partprobe "${EMMC}" 2>/dev/null || true
++  udevadm settle 2>/dev/null || true
++  count=0
++  while [ ! -b "${EMMC}p1" ] || [ ! -b "${EMMC}p2" ]; do
++    count=$((count + 1))
++    [ "${count}" -lt 10 ] || \
++      mibox4_fail "kernel did not discover the new eMMC partitions"
++    sleep 1
++  done
++}
++
++mibox4_patch_boot_config(){
++  root="$1"
++  if [ -f "${root}/uEnv.ini" ]; then
++    sed -i \
++      -e 's|^dtb_name=.*|dtb_name=/amlogic/meson-gxlx-mibox4.dtb|' \
++      -e 's|boot=[^ ]*|boot=LABEL=BOOT|' \
++      -e 's|disk=[^ ]*|disk=LABEL=DISK|' \
++      "${root}/uEnv.ini"
++  fi
++  if [ -f "${root}/extlinux/extlinux.conf" ]; then
++    sed -i \
++      -e 's|boot=[^ ]*|boot=LABEL=BOOT|' \
++      -e 's|disk=[^ ]*|disk=LABEL=DISK|' \
++      "${root}/extlinux/extlinux.conf"
++  fi
++}
++
++do_mibox4_install(){
++  mibox4_validate
++
++  echo ""
++  echo "WARNING: This permanently replaces Android system/data with LibreELEC."
++  echo "The signed bootloader, environment and recovery/boot areas are preserved."
++  echo "A mandatory recovery backup will be written to the USB /storage volume."
++  echo "Type MIBOX4 (uppercase) to continue:"
++  read -r answer
++  [ "${answer}" = "MIBOX4" ] || mibox4_fail "installation cancelled"
++
++  do_umount
++  mibox4_backup
++
++  echo "info: creating an MBR and eMMC BOOT/DISK partitions"
++  parted -s "${EMMC}" mklabel msdos || mibox4_fail "could not create MBR"
++  parted -s "${EMMC}" unit MiB mkpart primary fat32 512 1024 || \
++    mibox4_fail "could not create BOOT partition"
++  parted -s "${EMMC}" set 1 boot on || mibox4_fail "could not flag BOOT"
++  parted -s "${EMMC}" unit MiB mkpart primary ext4 1024 100% || \
++    mibox4_fail "could not create DISK partition"
++
++  # parted owns sector 0 only. Restore sectors 1..512 MiB so BL2, MPT,
++  # keys, environment and the vendor recovery/boot images remain byte-exact.
++  echo "info: restoring the preserved boot-chain area"
++  if ! gzip -dc "${BACKUP_USER}" | \
++      dd of="${EMMC}" bs=512 skip=1 seek=1 count=1048575 conv=notrunc; then
++    mibox4_fail "could not restore the preserved boot-chain area"
++  fi
++  sync
++  mibox4_wait_partitions
++
++  echo "info: formatting ${EMMC}p1 as BOOT"
++  mkfs.fat -F 32 -n BOOT "${EMMC}p1" || mibox4_fail "BOOT format failed"
++  echo "info: formatting ${EMMC}p2 as DISK"
++  mkfs.ext4 -F -L DISK "${EMMC}p2" || mibox4_fail "DISK format failed"
++  sleep 1
++  do_umount
++
++  install_root=/tmp/emmctool-mibox4
++  mkdir -p "${install_root}/boot" "${install_root}/disk"
++  mount "${EMMC}p1" "${install_root}/boot" || \
++    mibox4_fail "could not mount BOOT"
++  mount "${EMMC}p2" "${install_root}/disk" || {
++    umount "${install_root}/boot"
++    mibox4_fail "could not mount DISK"
++  }
++
++  echo "info: copying the running USB boot files to eMMC"
++  if ! cp -R /flash/. "${install_root}/boot/"; then
++    umount "${install_root}/disk" "${install_root}/boot"
++    mibox4_fail "could not copy boot files"
++  fi
++  mibox4_patch_boot_config "${install_root}/boot"
++  sync
++  umount "${install_root}/disk" "${install_root}/boot"
++  rmdir "${install_root}/disk" "${install_root}/boot" "${install_root}"
++
++  echo ""
++  echo "info: Mi Box 4 eMMC installation completed"
++  echo "info: recovery backup prefix is ${BACKUP_PREFIX}"
++  echo "info: shut down, remove the USB drive, then power-cycle the box"
++  echo ""
++}
++
+ do_writeprotect(){
+   echo  "info: disabling emmc write protection"
+   echo 0 > "/sys/block/${EMMC}boot0/force_ro"
+@@ -194,6 +358,7 @@ do_help(){
+   echo "                (r)esize              : resize the storage partition to 100%"
+   echo "                (s)storage            : convert emmc for use as /storage (boot from sdcard)"
+   echo "                (z)ero                : zero (erase/wipe) the eMMC module"
++  echo "                (x)install            : install from USB on Xiaomi Mi Box 4"
+   echo "                (h)elp                : displays this help message"
+   echo ""
+ }
+@@ -207,7 +372,7 @@ if [ -z "${EMMC}" ]; then
+ fi
+ 
+ case $(dtname) in
+-  azw*|bananapi*|friendlyarm*|hardkernel*|khadas*|libretech*|radxa*|wetek*)
++  azw*|bananapi*|friendlyarm*|hardkernel*|khadas*|libretech*|radxa*|wetek*|xiaomi,mibox4)
+     if [ "${BOOT}" = "${EMMC}" ]; then
+       do_info
+       echo "Your device is booted from the eMMC module!"
+@@ -222,8 +387,15 @@ case $(dtname) in
+     ;;
+ esac
+ 
++if [ "$(dtname)" = "xiaomi,mibox4" ]; then
++  case "${1}" in
++    ""|backup|b|info|i|install|x|help|h) ;;
++    *) mibox4_fail "Mi Box 4 only supports info, backup and install" ;;
++  esac
++fi
++
+ case "${1}" in
+-  backup)
++  backup|b)
+     do_backup "$@"
+     ;;
+   detect|d)
+@@ -249,6 +421,9 @@ case "${1}" in
+   zero|z)
+     do_zero
+     ;;
++  install|x)
++    do_mibox4_install
++    ;;
+   *)
+     do_info
+     do_help
+-- 
+2.51.0
+
+

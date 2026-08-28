@@ -79,6 +79,17 @@
 	compatible = "amlogic,gxlx-vdec", "amlogic,gx-vdec";
 };
 
+/*
+ * The vendor DT describes the WLAN address as the six-byte mac_wifi eFuse
+ * key at offset 0x0c.  rtw88 consumes this through its standard
+ * "mac-address" nvmem cell when the module's own eFuse has no valid address.
+ */
+&efuse {
+	wifi_mac: wifi-mac@c {
+		reg = <0x0c 0x06>;
+	};
+};
+
 /* The Mi Box 4 has neither an Ethernet connector nor an SD card slot. */
 &ethmac {
 	status = "disabled";
@@ -113,6 +124,8 @@
 	/* SDIO function 1 is the RTL8723DS WLAN device. */
 	rtl8723ds: wifi@1 {
 		reg = <1>;
+		nvmem-cells = <&wifi_mac>;
+		nvmem-cell-names = "mac-address";
 		interrupt-parent = <&gpio_intc>;
 		/* vendor GPIO 0x56 = GPIOX_7 = GPIO interrupt 96 */
 		interrupts = <96 IRQ_TYPE_LEVEL_HIGH>;
