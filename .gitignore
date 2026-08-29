@@ -7,8 +7,10 @@
 /tools/libreelec-ordered-test/
 /tools/libreelec-patch-test/
 /tools/libreelec-*/
+/tools/generated-direct-*/
 /tools/u-boot-2025.07/
 /tools/u-boot-2025.07.tar.bz2
+/tools/u-boot-direct-*/
 /tools/u-boot-patch-test-empty*/
 
 # Generated offline FIP outputs (the source stock extraction remains tracked).

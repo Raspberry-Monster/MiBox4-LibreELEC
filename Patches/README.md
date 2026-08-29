@@ -22,21 +22,21 @@ while read -r patch; do
 done < /path/to/MiBox4-LibreELEC/Patches/series/series
 ```
 
-补丁顺序按职责整理如下：
+补丁职责如下：
 
 1. `0001`：注册 `mibox4` AMLGX 目标，添加板级 Device Tree、RTL8723DS 固件及内核配置。
 2. `0002`：Realtek eFuse 地址无效时，从 Meson SoC eFuse 读取稳定的 WLAN MAC。
-3. `0003`：添加 U-Boot v2025.07 DTS、正式 `mibox4_defconfig`，把 Mainline BL33 安装为 `/u-boot.ext`。
-4. `0004`：扩展 LibreELEC 的 `amlogic-boot-fip` 包，复制标准命名的原厂阶段并用 Mainline BL33 生成 `u-boot-fip.bin`。
-5. `0005`：添加保留原厂早期启动链的 EMMCTool 安装、备份和整盘写入保护。
+3. `0003`：添加 U-Boot v2025.07 DTS 和 `mibox4_defconfig`，让 `mibox4` 使用 LibreELEC 原生直接启动镜像路径。
+4. `0004`：扩展 `amlogic-boot-fip`，使用原厂签名 BL2/BL30/BL31 和 Mainline BL33 构建完整 `u-boot.bin.sd.bin`。
+5. `0005`：添加带备份、校验和完整 FIP 写入的 Mi Box 4 EMMCTool 安装流程。
 
-`u-boot/fip/mibox4/` 保存 `bl2.sign`、`bl30.enc`、`bl31.enc`、`bl33.enc`
-等标准输入名及校验值。构建时仅重新封装 Mainline BL33；原厂 BL2/BL30/BL31
-保持字节不变。
+`u-boot/fip/mibox4/` 保存原厂包装阶段和校验值。构建时重新封装 Mainline
+BL33，生成的完整 FIP 由 LibreELEC 标准 `mkimage_uboot` 写入镜像启动扇区。
+镜像中不再包含 `/u-boot.ext`，也不再通过原厂 U-Boot chainload BL33。
 
-正式启动仍由原厂启动链通过 `s905_autoscript` chainload 原始
-`/u-boot.ext`。生成的 `u-boot-fip.bin` 仅作为构建/恢复参考产物进入 release，
-不会写入镜像启动扇区，也不会由 EMMCTool 自动刷入 eMMC。
+U-Boot 会使用标准 FDT fixup 在 Linux 设备树的 `/chosen` 节点中写入
+`u-boot,version`。安装器读取该属性确认当前启动链，不再添加或检查
+`mibox4_bl33=mainline` 内核命令行参数。
 
 ## 构建
 
@@ -45,6 +45,5 @@ PROJECT=Amlogic ARCH=aarch64 DEVICE=AMLGX \
   UBOOT_SYSTEM=mibox4 make image
 ```
 
-成功经过 Mainline BL33 后，内核命令行应包含 `mibox4_bl33=mainline`。
-禁止把镜像或 `u-boot-fip.bin` 直接写入 eMMC；应先从 USB 启动，再执行
-`emmctool install`。
+完整 FIP 会修改设备启动容器。部署前必须保留可用的整盘、boot0 和 boot1
+备份，并准备外部恢复方法。

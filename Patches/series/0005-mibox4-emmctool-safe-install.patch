@@ -1,15 +1,14 @@
-From dac7158e5b90ad13fb945d527a3e72fb47a29ba1 Mon Sep 17 00:00:00 2001
-From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
-Date: Sun, 30 Aug 2026 01:14:24 +0800
-Subject: [PATCH 5/5] emmctool: safely install production Mi Box 4 images
+From 5e4afa45a81f725fca82a6cb7696bb4e2dbb530f Mon Sep 17 00:00:00 2001
+From: MiBox4-LibreELEC contributors <noreply@example.com>
+Date: Sun, 30 Aug 2026 01:40:56 +0800
+Subject: [PATCH] emmctool: install direct-boot Mi Box 4 FIP
 
-Signed-off-by: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 ---
- packages/tools/emmctool/scripts/emmctool | 212 ++++++++++++++++++++++-
- 1 file changed, 209 insertions(+), 3 deletions(-)
+ packages/tools/emmctool/scripts/emmctool | 245 ++++++++++++++++++++++-
+ 1 file changed, 242 insertions(+), 3 deletions(-)
 
 diff --git a/packages/tools/emmctool/scripts/emmctool b/packages/tools/emmctool/scripts/emmctool
-index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09af0f1e4bf 100755
+index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..957e19810ce32cc5a4552bd100fa64bd9eea0beb 100755
 --- a/packages/tools/emmctool/scripts/emmctool
 +++ b/packages/tools/emmctool/scripts/emmctool
 @@ -3,15 +3,25 @@
@@ -39,7 +38,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
    echo "info: compressing completed"
  }
  
-@@ -138,6 +148,186 @@ do_umount(){
+@@ -138,6 +148,219 @@ do_umount(){
    done
  }
  
@@ -52,20 +51,35 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
 +  [ "$(dtname)" = "xiaomi,mibox4" ] || \
 +    mibox4_fail "the Mi Box 4 installer was invoked on $(dtname)"
 +
-+  [ -f /flash/u-boot.ext ] || \
-+    mibox4_fail "the production Mainline BL33 is missing from /flash"
-+  grep -qw 'mibox4_bl33=mainline' /proc/cmdline || \
-+    mibox4_fail "the running system did not boot through Mainline BL33"
++  CHOSEN_UBOOT=/sys/firmware/devicetree/base/chosen/u-boot,version
++  [ -r "${CHOSEN_UBOOT}" ] || \
++    mibox4_fail "Mainline U-Boot did not populate /chosen/u-boot,version"
++  UBOOT_VERSION=$(tr -d '\000' < "${CHOSEN_UBOOT}")
++  case "${UBOOT_VERSION}" in
++    2025.07*) ;;
++    *) mibox4_fail "unexpected /chosen/u-boot,version: ${UBOOT_VERSION}" ;;
++  esac
++
++  MIBOX4_UBOOT=/usr/share/bootloader/u-boot.bin.sd.bin
++  [ -f "${MIBOX4_UBOOT}" ] || \
++    mibox4_fail "the packaged Mi Box 4 FIP is missing"
++  MIBOX4_UBOOT_SIZE=$(wc -c < "${MIBOX4_UBOOT}")
++  case "${MIBOX4_UBOOT_SIZE}" in
++    ''|*[!0-9]*) mibox4_fail "could not determine the packaged FIP size" ;;
++  esac
++  [ "${MIBOX4_UBOOT_SIZE}" -le 4194304 ] || \
++    mibox4_fail "the packaged FIP overlaps the preserved MPT"
++  IMAGE_BOOT_MAGIC=$(dd if="${MIBOX4_UBOOT}" bs=1 skip=528 count=4 2>/dev/null)
++  [ "${IMAGE_BOOT_MAGIC}" = "@AML" ] || \
++    mibox4_fail "the packaged Mi Box 4 FIP is invalid"
 +
 +  [ -f /flash/KERNEL ] || mibox4_fail "/flash/KERNEL is missing"
-+  [ -f /flash/s905_autoscript ] || \
-+    mibox4_fail "/flash/s905_autoscript is missing"
-+  [ -f /flash/emmc_autoscript ] || \
-+    mibox4_fail "/flash/emmc_autoscript is missing"
 +  [ -f /flash/amlogic/meson-gxlx-mibox4.dtb ] || \
 +    mibox4_fail "the Mi Box 4 DTB is missing from /flash/amlogic"
-+  [ -f /flash/uEnv.ini ] || mibox4_fail "/flash/uEnv.ini is missing"
-+  grep -q '^dtb_name=/amlogic/meson-gxlx-mibox4.dtb$' /flash/uEnv.ini || \
++  [ -f /flash/extlinux/extlinux.conf ] || \
++    mibox4_fail "/flash/extlinux/extlinux.conf is missing"
++  grep -q '^  FDT /amlogic/meson-gxlx-mibox4.dtb$' \
++      /flash/extlinux/extlinux.conf || \
 +    mibox4_fail "the running image is not the dedicated Mi Box 4 board image"
 +
 +  BOOT_MAGIC=$(dd if="${EMMC}" bs=1 skip=528 count=4 2>/dev/null)
@@ -129,6 +143,21 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
 +  sync
 +}
 +
++mibox4_write_bootloader(){
++  echo "info: writing the Mainline U-Boot FIP to ${EMMC}"
++  dd if="${MIBOX4_UBOOT}" of="${EMMC}" conv=fsync,notrunc \
++    bs=1 count=440 || mibox4_fail "could not write the FIP boot sector"
++  dd if="${MIBOX4_UBOOT}" of="${EMMC}" conv=fsync,notrunc \
++    bs=512 skip=1 seek=1 || mibox4_fail "could not write the FIP payload"
++
++  WRITTEN_BOOT_MAGIC=$(dd if="${EMMC}" bs=1 skip=528 count=4 2>/dev/null)
++  [ "${WRITTEN_BOOT_MAGIC}" = "@AML" ] || \
++    mibox4_fail "the written Mi Box 4 FIP failed verification"
++  WRITTEN_MPT_MAGIC=$(dd if="${EMMC}" bs=1 skip=4194304 count=3 2>/dev/null)
++  [ "${WRITTEN_MPT_MAGIC}" = "MPT" ] || \
++    mibox4_fail "the preserved Amlogic MPT failed verification"
++}
++
 +mibox4_wait_partitions(){
 +  partprobe "${EMMC}" 2>/dev/null || true
 +  udevadm settle 2>/dev/null || true
@@ -163,7 +192,8 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
 +
 +  echo ""
 +  echo "WARNING: This permanently replaces Android system/data with LibreELEC."
-+  echo "The vendor bootloader, environment and recovery/boot areas are preserved."
++  echo "The eMMC boot container will be replaced with Mainline U-Boot."
++  echo "Xiaomi's signed BL2/BL30/BL31 firmware is retained inside the new FIP."
 +  echo "A mandatory recovery backup will be written to the USB /storage volume."
 +  echo "Type MIBOX4 (uppercase) to continue:"
 +  read -r answer
@@ -180,13 +210,15 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
 +  parted -s "${EMMC}" unit MiB mkpart primary ext4 1024 100% || \
 +    mibox4_fail "could not create DISK partition"
 +
-+  # parted owns sector 0 only. Restore sectors 1..512 MiB so BL2, MPT,
-+  # keys, environment and the vendor recovery/boot images remain byte-exact.
-+  echo "info: restoring the preserved boot-chain area"
++  # parted owns sector 0 only. Restore sectors 1..512 MiB first so the MPT,
++  # keys, environment and recovery images remain byte-exact, then replace the
++  # leading boot container through LibreELEC's normal split-write layout.
++  echo "info: restoring the preserved eMMC metadata area"
 +  if ! gzip -dc "${BACKUP_USER}" | \
 +      dd of="${EMMC}" bs=512 skip=1 seek=1 count=1048575 conv=notrunc; then
-+    mibox4_fail "could not restore the preserved boot-chain area"
++    mibox4_fail "could not restore the preserved eMMC metadata area"
 +  fi
++  mibox4_write_bootloader
 +  sync
 +  mibox4_wait_partitions
 +
@@ -226,7 +258,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
  do_writeprotect(){
    echo  "info: disabling emmc write protection"
    echo 0 > "/sys/block/${EMMC}boot0/force_ro"
-@@ -155,6 +345,11 @@ do_write(){
+@@ -155,6 +378,11 @@ do_write(){
  
    if [ -e "${2}" ]; then
      case "${2}" in
@@ -238,7 +270,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
        *box.img.gz|*box.img)
          echo "error: ${2} is not a bootable image, aborting!"
          exit 1
-@@ -194,6 +389,7 @@ do_help(){
+@@ -194,6 +422,7 @@ do_help(){
    echo "                (r)esize              : resize the storage partition to 100%"
    echo "                (s)storage            : convert emmc for use as /storage (boot from sdcard)"
    echo "                (z)ero                : zero (erase/wipe) the eMMC module"
@@ -246,7 +278,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
    echo "                (h)elp                : displays this help message"
    echo ""
  }
-@@ -207,7 +403,7 @@ if [ -z "${EMMC}" ]; then
+@@ -207,7 +436,7 @@ if [ -z "${EMMC}" ]; then
  fi
  
  case $(dtname) in
@@ -255,7 +287,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
      if [ "${BOOT}" = "${EMMC}" ]; then
        do_info
        echo "Your device is booted from the eMMC module!"
-@@ -222,8 +418,15 @@ case $(dtname) in
+@@ -222,8 +451,15 @@ case $(dtname) in
      ;;
  esac
  
@@ -272,7 +304,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
      do_backup "$@"
      ;;
    detect|d)
-@@ -249,6 +452,9 @@ case "${1}" in
+@@ -249,6 +485,9 @@ case "${1}" in
    zero|z)
      do_zero
      ;;
@@ -282,6 +314,3 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
    *)
      do_info
      do_help
--- 
-2.55.0.windows.3
-

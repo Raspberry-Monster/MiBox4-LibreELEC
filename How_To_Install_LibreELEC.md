@@ -1,60 +1,62 @@
 # How to Boot LibreELEC on Mi Box 4
 
-You will need the dedicated `-mibox4.img.gz` image (not the generic AMLGX
-`-box.img.gz`), a USB drive and hub, and Android Platform Tools.
+The dedicated `-mibox4.img.gz` image contains a complete Amlogic FIP in its
+raw boot sectors. It combines Xiaomi's signed BL2/BL30/BL31 stages with the
+Mainline U-Boot v2025.07 BL33 and boots it directly. The old
+`s905_autoscript` → `/u-boot.ext` chainload path is not used.
 
-## Boot from USB
+## Before deployment
 
-1. Write the dedicated image to USB with Rufus, LibreELEC USB-SD Creator, or
-   another disk-imaging tool.
-2. Do not edit `uEnv.ini`. The image already contains
-   `dtb_name=/amlogic/meson-gxlx-mibox4.dtb`, the Mainline BL33
-   `/u-boot.ext`, and the vendor autoscripts.
-3. Connect the USB drive through the hub, enable ADB debugging in Android, and
-   run:
+Installing to eMMC replaces Android system/data and the active user-area boot
+container. Keep all of the following on separate storage before proceeding:
 
-   ```bash
-   adb connect YOUR_BOX_IP_ADDRESS
-   adb shell reboot update
-   ```
+- a complete stock eMMC user-area dump;
+- the original eMMC `boot0` and `boot1` dumps;
+- a tested Amlogic recovery/USB-burning procedure.
 
-4. After reboot, verify that the formal chain completed:
+The previous `adb shell reboot update` instructions depended on the removed
+vendor-U-Boot chainload path. Use a recovery or external boot method capable
+of starting the full FIP image. Do not assume a stock vendor U-Boot autoscript
+can load this image.
 
-   ```bash
-   grep -o 'mibox4_bl33=mainline' /proc/cmdline
-   findmnt /flash
-   findmnt /storage
-   lsblk -o NAME,TRAN,SIZE,FSTYPE,LABEL,MOUNTPOINTS
-   ```
+## Verify a direct Mainline U-Boot boot
 
-   Both mounts must be on the USB device. The vendor BL2/BL30/BL31 and
-   `s905_autoscript` are still the early stages; Mainline U-Boot is BL33.
-
-## Install to eMMC
-
-> Installing to eMMC destroys Android system/data and can brick the device.
-> Keep a complete stock dump and the generated backup on separate storage.
-
-Never use `emmctool write` and never write the image or a FIP directly to eMMC.
-The production installer preserves the vendor boot container and environment.
-The build may publish `u-boot-fip.bin` as a diagnostic/recovery artifact; it
-is not `/u-boot.ext`, is not copied into the boot filesystem, and must not be
-flashed by this installation procedure.
-
-Boot the USB image, confirm the marker and mounts above, then over SSH run:
+After booting the dedicated image, verify the board, U-Boot handoff and source
+devices:
 
 ```bash
 dtname
+tr -d '\0' < /sys/firmware/devicetree/base/chosen/u-boot,version; echo
+findmnt /flash
+findmnt /storage
+lsblk -o NAME,TRAN,SIZE,FSTYPE,LABEL,MOUNTPOINTS
+```
+
+`dtname` must print `xiaomi,mibox4`, and `u-boot,version` must begin with
+`2025.07`. Both mounts must be on the intended external boot device before an
+eMMC installation.
+
+## Install to eMMC
+
+Over SSH, inspect the target and start the guarded installer:
+
+```bash
 emmctool info
 emmctool install
 # short form: emmctool x
 ```
 
-Confirm by typing uppercase `MIBOX4`. The installer requires
-`dtname=xiaomi,mibox4`, `/flash/u-boot.ext`, and
-`mibox4_bl33=mainline`; it backs up the first 512 MiB plus eMMC boot areas,
-preserves the vendor chain, creates `BOOT`/`DISK`, and copies the running
-image. After completion, shut down, remove USB, and cold-power-cycle.
+Confirm by typing uppercase `MIBOX4`. The installer then:
 
-If anything fails, restore the saved first-512-MiB and boot0/boot1 backups with
-an external recovery workflow. Do not experiment on the live eMMC boot area.
+1. validates `/chosen/u-boot,version`, the Mi Box 4 DTB and packaged FIP;
+2. checks the original `@AML` container, MPT and eMMC capacity;
+3. backs up the first 512 MiB plus `boot0` and `boot1` to USB `/storage`;
+4. recreates the BOOT/DISK partitions while restoring preserved metadata;
+5. writes `u-boot.bin.sd.bin` using LibreELEC's split-sector layout;
+6. copies the running LibreELEC boot files and fixes the extlinux labels.
+
+After completion, shut down, remove the external boot device, and cold power
+cycle. If the box does not start, stop and restore the saved user-area and
+boot-area images with the prepared external recovery workflow.
+
+Never flash `bl2.sign`, `bl30.enc`, `bl31.enc`, or `bl33.enc` individually.

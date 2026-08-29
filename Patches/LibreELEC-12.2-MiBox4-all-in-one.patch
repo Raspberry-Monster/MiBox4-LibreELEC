@@ -1,31 +1,56 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
-Date: Sun, 30 Aug 2026 12:00:00 +0800
-Subject: [PATCH] LibreELEC 12.2: add production Xiaomi Mi Box 4 support
+From ebc42e2d697c99b286b2260f2e24c1a16ae7a6ad Mon Sep 17 00:00:00 2001
+From: MiBox4-LibreELEC contributors <noreply@example.com>
+Date: Sun, 30 Aug 2026 01:48:39 +0800
+Subject: [PATCH] LibreELEC 12.2: add direct-boot Xiaomi Mi Box 4 support
 
-Add the Mi Box 4 board target, Linux device tree, RTL8723DS firmware and
-SoC-eFuse Wi-Fi MAC fallback. Build the validated Mainline U-Boot BL33 with a
-dedicated production defconfig while retaining Xiaomi's signed BL2/BL30/BL31.
-
-Teach LibreELEC's amlogic-boot-fip package to assemble a reference Mi Box 4
-FIP from the preserved vendor wrappers and the freshly built Mainline BL33.
-The recoverable production path still chainloads the raw /u-boot.ext; the FIP
-is released only as u-boot-fip.bin and is never written automatically.
-
-Add guarded EMMCTool installation that preserves the vendor boot chain and
-requires proof that the running image booted through Mainline BL33.
-
-This is the combined equivalent of Patches/series/0001 through 0005.
-
-Signed-off-by: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 ---
+ .../amlogic-boot-fip/files/mibox4/Makefile    |  35 +++
+ .../amlogic-boot-fip/files/mibox4/README.md   |  19 ++
+ .../amlogic-boot-fip/files/mibox4/SHA256SUMS  |  10 +
+ .../amlogic-boot-fip/files/mibox4/bl2.bin     | Bin 0 -> 49152 bytes
+ .../amlogic-boot-fip/files/mibox4/bl2.sign    | Bin 0 -> 49152 bytes
+ .../amlogic-boot-fip/files/mibox4/bl30.bin    | Bin 0 -> 54272 bytes
+ .../amlogic-boot-fip/files/mibox4/bl30.enc    | Bin 0 -> 54784 bytes
+ .../amlogic-boot-fip/files/mibox4/bl31.bin    | Bin 0 -> 82944 bytes
+ .../amlogic-boot-fip/files/mibox4/bl31.enc    | Bin 0 -> 82944 bytes
+ .../amlogic-boot-fip/files/mibox4/bl33.bin    | Bin 0 -> 873984 bytes
+ .../amlogic-boot-fip/files/mibox4/bl33.enc    | Bin 0 -> 874496 bytes
+ .../tools/amlogic-boot-fip/files/mibox4/fip   | Bin 0 -> 15872 bytes
+ .../amlogic-boot-fip/files/mibox4/fip.enc     | Bin 0 -> 16384 bytes
+ packages/tools/amlogic-boot-fip/package.mk    |   6 +
+ packages/tools/emmctool/scripts/emmctool      | 245 +++++++++++++++++-
+ projects/Amlogic/bootloader/mkimage           |   2 +-
+ projects/Amlogic/config/kernel-firmware.dat   |   1 +
+ ...rm64-dts-add-xiaomi-mibox4-rtl8723ds.patch | 139 ++++++++++
+ ...-rtw88-use-mibox4-soc-efuse-wifi-mac.patch | 104 ++++++++
+ projects/Amlogic/linux/linux.aarch64.conf     |   2 +-
+ .../u-boot-0003-LOCAL-add-xiaomi-mibox4.patch | 136 ++++++++++
+ scripts/uboot_helper                          |   4 +
+ 22 files changed, 698 insertions(+), 5 deletions(-)
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/Makefile
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/README.md
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/SHA256SUMS
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/bl2.bin
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/bl2.sign
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/bl30.bin
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/bl30.enc
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/bl31.bin
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/bl31.enc
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/bl33.bin
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/bl33.enc
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/fip
+ create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/fip.enc
+ create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
+ create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
+ create mode 100644 projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
+
 diff --git a/packages/tools/amlogic-boot-fip/files/mibox4/Makefile b/packages/tools/amlogic-boot-fip/files/mibox4/Makefile
 new file mode 100644
-index 0000000000000000000000000000000000000000..80164c65639b95c5f575699ea9cd90da7702c499
+index 0000000000000000000000000000000000000000..ca86162414ac7b851c0b58f6bd9158ec71ce1010
 --- /dev/null
 +++ b/packages/tools/amlogic-boot-fip/files/mibox4/Makefile
-@@ -0,0 +1,32 @@
-+# Mi Box 4 GXL FIP packaging using the vendor early-stage wrappers.
+@@ -0,0 +1,35 @@
++# Mi Box 4 GXL FIP packaging using Xiaomi's signed early-stage wrappers.
 +
 +O ?= .
 +TMP ?= .
@@ -39,45 +64,51 @@ index 0000000000000000000000000000000000000000..80164c65639b95c5f575699ea9cd90da
 +endif
 +
 +.PHONY: all clean distclean
++.NOTPARALLEL: ${TMP}/bl33.bin.enc ${O}/u-boot.bin
 +
 +all: ${O}/u-boot.bin
 +
-+${TMP}/bl33-mainline.enc: ${BL33}
++${TMP}/bl33.bin.enc: ${BL33}
 +	${QEMU} ${AMLICRYPT} --bl3enc --input ${BL33} --output $@
 +
-+${O}/u-boot.bin: bl2.sign bl30.enc bl31.enc ${TMP}/bl33-mainline.enc
++${O}/u-boot.bin: bl2.sign bl30.enc bl31.enc ${TMP}/bl33.bin.enc
 +	${QEMU} ${AMLICRYPT} --bootmk --output $@ \
 +		--bl2 bl2.sign --bl30 bl30.enc --bl31 bl31.enc \
-+		--bl33 ${TMP}/bl33-mainline.enc
++		--bl33 ${TMP}/bl33.bin.enc
++	test -f ${O}/u-boot.bin.sd.bin
 +	dd if=${O}/u-boot.bin of=${O}/u-boot.bin.usb.tpl skip=49152 bs=1
 +	dd if=${O}/u-boot.bin of=${O}/u-boot.bin.usb.bl2 bs=49152 count=1
 +
 +clean:
-+	rm -f ${TMP}/bl33-mainline.enc
++	rm -f ${TMP}/bl33.bin.enc
 +
 +distclean: clean
-+	rm -f ${O}/u-boot.bin ${O}/u-boot.bin.usb.bl2 ${O}/u-boot.bin.usb.tpl
++	rm -f ${O}/u-boot.bin ${O}/u-boot.bin.sd.bin
++	rm -f ${O}/u-boot.bin.usb.bl2 ${O}/u-boot.bin.usb.tpl
 diff --git a/packages/tools/amlogic-boot-fip/files/mibox4/README.md b/packages/tools/amlogic-boot-fip/files/mibox4/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..5999429ad2a8e90e874721fed5f9616ef6c231fc
+index 0000000000000000000000000000000000000000..f4607c34dfb9420fe95219ff423e7d5693a39521
 --- /dev/null
 +++ b/packages/tools/amlogic-boot-fip/files/mibox4/README.md
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,19 @@
 +# Mi Box 4 FIP inputs
 +
 +This directory mirrors the standard file names used by
 +LibreELEC/amlogic-boot-fip for the GXL firmware image package:
 +
 +- `bl2.sign`, `bl30.enc`, `bl31.enc`: Xiaomi's original signed/encrypted
-+  early stages, retained byte-for-byte.
++  early stages, retained byte-for-byte and used by the production FIP.
 +- `bl33.enc`: the original vendor BL33 wrapper, retained as a reference.
-+  The production build replaces this slot with the Mainline BL33 wrapper.
++  The build replaces this slot with an encoded Mainline U-Boot BL33.
 +- `bl2.bin`, `bl30.bin`, `bl31.bin`, `bl33.bin`: decoded inspection copies.
 +- `fip`, `fip.enc`: extracted FIP metadata/payload references.
 +- `SHA256SUMS`: hashes of every input.
 +
-+The files are copied from `bootloader/mibox4-stock/extracted`. They are
-+reference inputs for FIP packaging and must never be written directly to eMMC.
++The files are copied from `bootloader/mibox4-stock/extracted`. The board
++Makefile follows the `LibreELEC/amlogic-boot-fip` interface and emits the full
++`u-boot.bin`/`u-boot.bin.sd.bin` boot container. LibreELEC writes the SD image
++to the image boot sectors through its standard `mkimage_uboot` path; no raw
++BL33 chainload file is used.
 +
 diff --git a/packages/tools/amlogic-boot-fip/files/mibox4/SHA256SUMS b/packages/tools/amlogic-boot-fip/files/mibox4/SHA256SUMS
 new file mode 100644
@@ -30675,7 +30706,7 @@ literal 0
 HcmV?d00001
 
 diff --git a/packages/tools/amlogic-boot-fip/package.mk b/packages/tools/amlogic-boot-fip/package.mk
-index 7e45c85d65101d94137d2cd2fe8073f750fa9ac7..30a0cdd6a03ce68559dd1881f76dd0a34728f849 100644
+index 7e45c85d65101d94137d2cd2fe8073f750fa9ac7..4dfde4f189a54a6557296393671160d9e518a7b2 100644
 --- a/packages/tools/amlogic-boot-fip/package.mk
 +++ b/packages/tools/amlogic-boot-fip/package.mk
 @@ -15,4 +15,10 @@ post_unpack() {
@@ -30683,14 +30714,14 @@ index 7e45c85d65101d94137d2cd2fe8073f750fa9ac7..30a0cdd6a03ce68559dd1881f76dd0a3
    mv ${PKG_BUILD}/aml-a311d-cc ${PKG_BUILD}/alta
    mv ${PKG_BUILD}/aml-s905d3-cc ${PKG_BUILD}/solitude
 +
-+  # Mi Box 4 keeps Xiaomi's signed early stages and replaces only BL33.
-+  # Install standard pre-wrapped inputs for the board-specific FIP makefile.
++  # Mi Box 4 reuses Xiaomi's signed early stages and replaces BL33 with the
++  # freshly built Mainline U-Boot, following the normal build-fip.sh flow.
 +  if [ "${UBOOT_SYSTEM}" = "mibox4" ]; then
 +    cp -a "${PKG_DIR}/files/mibox4" "${PKG_BUILD}/mibox4"
 +  fi
  }
 diff --git a/packages/tools/emmctool/scripts/emmctool b/packages/tools/emmctool/scripts/emmctool
-index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09af0f1e4bf 100755
+index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..957e19810ce32cc5a4552bd100fa64bd9eea0beb 100755
 --- a/packages/tools/emmctool/scripts/emmctool
 +++ b/packages/tools/emmctool/scripts/emmctool
 @@ -3,15 +3,25 @@
@@ -30720,7 +30751,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
    echo "info: compressing completed"
  }
  
-@@ -138,6 +148,186 @@ do_umount(){
+@@ -138,6 +148,219 @@ do_umount(){
    done
  }
  
@@ -30733,20 +30764,35 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
 +  [ "$(dtname)" = "xiaomi,mibox4" ] || \
 +    mibox4_fail "the Mi Box 4 installer was invoked on $(dtname)"
 +
-+  [ -f /flash/u-boot.ext ] || \
-+    mibox4_fail "the production Mainline BL33 is missing from /flash"
-+  grep -qw 'mibox4_bl33=mainline' /proc/cmdline || \
-+    mibox4_fail "the running system did not boot through Mainline BL33"
++  CHOSEN_UBOOT=/sys/firmware/devicetree/base/chosen/u-boot,version
++  [ -r "${CHOSEN_UBOOT}" ] || \
++    mibox4_fail "Mainline U-Boot did not populate /chosen/u-boot,version"
++  UBOOT_VERSION=$(tr -d '\000' < "${CHOSEN_UBOOT}")
++  case "${UBOOT_VERSION}" in
++    2025.07*) ;;
++    *) mibox4_fail "unexpected /chosen/u-boot,version: ${UBOOT_VERSION}" ;;
++  esac
++
++  MIBOX4_UBOOT=/usr/share/bootloader/u-boot.bin.sd.bin
++  [ -f "${MIBOX4_UBOOT}" ] || \
++    mibox4_fail "the packaged Mi Box 4 FIP is missing"
++  MIBOX4_UBOOT_SIZE=$(wc -c < "${MIBOX4_UBOOT}")
++  case "${MIBOX4_UBOOT_SIZE}" in
++    ''|*[!0-9]*) mibox4_fail "could not determine the packaged FIP size" ;;
++  esac
++  [ "${MIBOX4_UBOOT_SIZE}" -le 4194304 ] || \
++    mibox4_fail "the packaged FIP overlaps the preserved MPT"
++  IMAGE_BOOT_MAGIC=$(dd if="${MIBOX4_UBOOT}" bs=1 skip=528 count=4 2>/dev/null)
++  [ "${IMAGE_BOOT_MAGIC}" = "@AML" ] || \
++    mibox4_fail "the packaged Mi Box 4 FIP is invalid"
 +
 +  [ -f /flash/KERNEL ] || mibox4_fail "/flash/KERNEL is missing"
-+  [ -f /flash/s905_autoscript ] || \
-+    mibox4_fail "/flash/s905_autoscript is missing"
-+  [ -f /flash/emmc_autoscript ] || \
-+    mibox4_fail "/flash/emmc_autoscript is missing"
 +  [ -f /flash/amlogic/meson-gxlx-mibox4.dtb ] || \
 +    mibox4_fail "the Mi Box 4 DTB is missing from /flash/amlogic"
-+  [ -f /flash/uEnv.ini ] || mibox4_fail "/flash/uEnv.ini is missing"
-+  grep -q '^dtb_name=/amlogic/meson-gxlx-mibox4.dtb$' /flash/uEnv.ini || \
++  [ -f /flash/extlinux/extlinux.conf ] || \
++    mibox4_fail "/flash/extlinux/extlinux.conf is missing"
++  grep -q '^  FDT /amlogic/meson-gxlx-mibox4.dtb$' \
++      /flash/extlinux/extlinux.conf || \
 +    mibox4_fail "the running image is not the dedicated Mi Box 4 board image"
 +
 +  BOOT_MAGIC=$(dd if="${EMMC}" bs=1 skip=528 count=4 2>/dev/null)
@@ -30810,6 +30856,21 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
 +  sync
 +}
 +
++mibox4_write_bootloader(){
++  echo "info: writing the Mainline U-Boot FIP to ${EMMC}"
++  dd if="${MIBOX4_UBOOT}" of="${EMMC}" conv=fsync,notrunc \
++    bs=1 count=440 || mibox4_fail "could not write the FIP boot sector"
++  dd if="${MIBOX4_UBOOT}" of="${EMMC}" conv=fsync,notrunc \
++    bs=512 skip=1 seek=1 || mibox4_fail "could not write the FIP payload"
++
++  WRITTEN_BOOT_MAGIC=$(dd if="${EMMC}" bs=1 skip=528 count=4 2>/dev/null)
++  [ "${WRITTEN_BOOT_MAGIC}" = "@AML" ] || \
++    mibox4_fail "the written Mi Box 4 FIP failed verification"
++  WRITTEN_MPT_MAGIC=$(dd if="${EMMC}" bs=1 skip=4194304 count=3 2>/dev/null)
++  [ "${WRITTEN_MPT_MAGIC}" = "MPT" ] || \
++    mibox4_fail "the preserved Amlogic MPT failed verification"
++}
++
 +mibox4_wait_partitions(){
 +  partprobe "${EMMC}" 2>/dev/null || true
 +  udevadm settle 2>/dev/null || true
@@ -30844,7 +30905,8 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
 +
 +  echo ""
 +  echo "WARNING: This permanently replaces Android system/data with LibreELEC."
-+  echo "The vendor bootloader, environment and recovery/boot areas are preserved."
++  echo "The eMMC boot container will be replaced with Mainline U-Boot."
++  echo "Xiaomi's signed BL2/BL30/BL31 firmware is retained inside the new FIP."
 +  echo "A mandatory recovery backup will be written to the USB /storage volume."
 +  echo "Type MIBOX4 (uppercase) to continue:"
 +  read -r answer
@@ -30861,13 +30923,15 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
 +  parted -s "${EMMC}" unit MiB mkpart primary ext4 1024 100% || \
 +    mibox4_fail "could not create DISK partition"
 +
-+  # parted owns sector 0 only. Restore sectors 1..512 MiB so BL2, MPT,
-+  # keys, environment and the vendor recovery/boot images remain byte-exact.
-+  echo "info: restoring the preserved boot-chain area"
++  # parted owns sector 0 only. Restore sectors 1..512 MiB first so the MPT,
++  # keys, environment and recovery images remain byte-exact, then replace the
++  # leading boot container through LibreELEC's normal split-write layout.
++  echo "info: restoring the preserved eMMC metadata area"
 +  if ! gzip -dc "${BACKUP_USER}" | \
 +      dd of="${EMMC}" bs=512 skip=1 seek=1 count=1048575 conv=notrunc; then
-+    mibox4_fail "could not restore the preserved boot-chain area"
++    mibox4_fail "could not restore the preserved eMMC metadata area"
 +  fi
++  mibox4_write_bootloader
 +  sync
 +  mibox4_wait_partitions
 +
@@ -30907,7 +30971,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
  do_writeprotect(){
    echo  "info: disabling emmc write protection"
    echo 0 > "/sys/block/${EMMC}boot0/force_ro"
-@@ -155,6 +345,11 @@ do_write(){
+@@ -155,6 +378,11 @@ do_write(){
  
    if [ -e "${2}" ]; then
      case "${2}" in
@@ -30919,7 +30983,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
        *box.img.gz|*box.img)
          echo "error: ${2} is not a bootable image, aborting!"
          exit 1
-@@ -194,6 +389,7 @@ do_help(){
+@@ -194,6 +422,7 @@ do_help(){
    echo "                (r)esize              : resize the storage partition to 100%"
    echo "                (s)storage            : convert emmc for use as /storage (boot from sdcard)"
    echo "                (z)ero                : zero (erase/wipe) the eMMC module"
@@ -30927,7 +30991,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
    echo "                (h)elp                : displays this help message"
    echo ""
  }
-@@ -207,7 +403,7 @@ if [ -z "${EMMC}" ]; then
+@@ -207,7 +436,7 @@ if [ -z "${EMMC}" ]; then
  fi
  
  case $(dtname) in
@@ -30936,7 +31000,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
      if [ "${BOOT}" = "${EMMC}" ]; then
        do_info
        echo "Your device is booted from the eMMC module!"
-@@ -222,8 +418,15 @@ case $(dtname) in
+@@ -222,8 +451,15 @@ case $(dtname) in
      ;;
  esac
  
@@ -30953,7 +31017,7 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
      do_backup "$@"
      ;;
    detect|d)
-@@ -249,6 +452,9 @@ case "${1}" in
+@@ -249,6 +485,9 @@ case "${1}" in
    zero|z)
      do_zero
      ;;
@@ -30963,102 +31027,19 @@ index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09a
    *)
      do_info
      do_help
-diff --git a/projects/Amlogic/bootloader/install b/projects/Amlogic/bootloader/install
-index a6f2c17b56634d77eb4e54321a4baadea8fcf1e5..13381f088059f2eb3f0c9a27123e4bfb32e87185 100644
---- a/projects/Amlogic/bootloader/install
-+++ b/projects/Amlogic/bootloader/install
-@@ -12,6 +12,16 @@ case "${UBOOT_SYSTEM}" in
-   box|"")
-     # no-op, use vendor bootloader
-     ;;
-+  mibox4)
-+    # Assemble a reference FIP from Xiaomi's wrapped early stages and the
-+    # Mainline BL33.  The raw BL33 is still installed as u-boot.ext below;
-+    # the FIP is retained as a diagnostic/recovery artifact.
-+    mkdir "${DESTDIR}/tmp"
-+    (cd "${FIPDIR}" || exit; ./build-fip.sh mibox4 \
-+      "$(get_build_dir "${BOOTLOADER}")/u-boot.bin" \
-+      "${DESTDIR}" "${DESTDIR}/tmp")
-+    rm -fr "${DESTDIR}/tmp"
-+    ;;
-   *)
-     mkdir "${DESTDIR}/tmp"
-     (cd "${FIPDIR}" || exit; ./build-fip.sh "${UBOOT_SYSTEM}" "$(get_build_dir "${BOOTLOADER}")/u-boot.bin" "${DESTDIR}" "${DESTDIR}/tmp")
-@@ -25,7 +35,18 @@ rm -rf "${INSTALL}"/usr/share/bootloader/u-boot*
- 
- # Install u-boot
- mkdir -p "${INSTALL}/usr/share/bootloader"
--if [ "${UBOOT_SYSTEM}" != "box" ]; then
-+if [ "${UBOOT_SYSTEM}" = "mibox4" ]; then
-+  if [ ! -f "${PKG_BUILD}/u-boot.bin" ]; then
-+    echo "Missing Mi Box 4 Mainline BL33: ${PKG_BUILD}/u-boot.bin" >&2
-+    exit 1
-+  fi
-+  cp -av "${PKG_BUILD}/u-boot.bin" \
-+    "${INSTALL}/usr/share/bootloader/u-boot.ext"
-+  if [ -f "${DESTDIR}/u-boot.bin" ]; then
-+    cp -av "${DESTDIR}/u-boot.bin" \
-+      "${INSTALL}/usr/share/bootloader/u-boot-fip.bin"
-+  fi
-+elif [ "${UBOOT_SYSTEM}" != "box" ]; then
-   if [ -f "${DESTDIR}/u-boot.bin.sd.bin" ]; then
-     cp -av "${DESTDIR}/u-boot.bin.sd.bin" "${INSTALL}/usr/share/bootloader"
-     # If target/u-boot exists, cache the signed bin
 diff --git a/projects/Amlogic/bootloader/mkimage b/projects/Amlogic/bootloader/mkimage
-index 282600bd55fe0dbfc1c600c9737d5fff36df28fa..8d37b540d02ce5da4069af6e5715b19d37e9cc44 100644
+index 282600bd55fe0dbfc1c600c9737d5fff36df28fa..61be37d9d57aa22529fb551f85ca446824379015 100644
 --- a/projects/Amlogic/bootloader/mkimage
 +++ b/projects/Amlogic/bootloader/mkimage
-@@ -9,6 +9,12 @@ mkimage_uboot(){
-   dd if="$INSTALL/usr/share/bootloader/u-boot.bin.sd.bin" of="$DISK" conv=fsync,notrunc bs=512 skip=1 seek=1 >"$SAVE_ERROR" 2>&1 || show_error
- }
- 
-+mkimage_uboot_ext(){
-+  echo "image: copying Mi Box 4 Mainline BL33 as u-boot.ext"
-+  mcopy -o "${RELEASE_DIR}/3rdparty/bootloader/u-boot.ext" \
-+    ::/u-boot.ext >"$SAVE_ERROR" 2>&1 || show_error
-+}
-+
- mkimage_autoscripts(){
-   echo "image: copying autoscript files"
-   mcopy -s -o ${RELEASE_DIR}/3rdparty/bootloader/*script ::
-@@ -69,6 +75,21 @@ case "${UBOOT_SYSTEM}" in
-     mkimage_bootini
+@@ -74,7 +74,7 @@ case "${UBOOT_SYSTEM}" in
+     mkimage_extlinux_fdtdir
      mkimage_dtb
      ;;
-+  mibox4)
-+    # Xiaomi's BL2/BL30/BL31 and vendor U-Boot remain the recoverable early
-+    # chain. s905_autoscript chainloads this image's Mainline BL33.
-+    mkimage_uEnv
-+    mkimage_autoscripts
-+    mkimage_bootini
-+    if [ -n "${EXTRA_CMDLINE}" ]; then
-+      EXTRA_CMDLINE="${EXTRA_CMDLINE} mibox4_bl33=mainline"
-+    else
-+      EXTRA_CMDLINE="mibox4_bl33=mainline"
-+    fi
-+    mkimage_extlinux
-+    mkimage_uboot_ext
-+    mkimage_dtb
-+    ;;
-   odroid-n2|odroid-c4)
+-  bananapi*|khadas*|lafrite|lepotato|nanopi-k2|odroid*|radxa*|wetek*)
++  bananapi*|khadas*|lafrite|lepotato|mibox4|nanopi-k2|odroid*|radxa*|wetek*)
      mkimage_uboot
-     mkimage_extlinux_fdtdir
-diff --git a/projects/Amlogic/bootloader/release b/projects/Amlogic/bootloader/release
-index 641fccd9a43091fa67e320cbfffd31540828ddb9..4f8e3ad74a803b2d833223663c5517f7984c2c5f 100644
---- a/projects/Amlogic/bootloader/release
-+++ b/projects/Amlogic/bootloader/release
-@@ -7,6 +7,11 @@ DSTDIR="$RELEASE_DIR/3rdparty/bootloader"
- mkdir -p "$DSTDIR"
-   cp -a "$SRCDIR"/*.scr "$SRCDIR"/*script "$DSTDIR"
- 
-+  if [ "${UBOOT_SYSTEM}" = "mibox4" ]; then
-+    cp -av "$SRCDIR/u-boot.ext" "$DSTDIR/u-boot.ext"
-+    cp -av "$SRCDIR/u-boot-fip.bin" "$DSTDIR/u-boot-fip.bin"
-+  fi
-+
-   if find_file_path "bootloader/${UBOOT_SYSTEM}.ini"; then
-     cp -av "${FOUND_PATH}" "$DSTDIR/boot.ini"
-   fi
+     mkimage_extlinux
+     mkimage_dtb
 diff --git a/projects/Amlogic/config/kernel-firmware.dat b/projects/Amlogic/config/kernel-firmware.dat
 index 4896c49f9168561d26e5079476a4094d3e0a5e3a..fde7e8cad5483d3e661660cd19467a5879078eee 100644
 --- a/projects/Amlogic/config/kernel-firmware.dat

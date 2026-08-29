@@ -29,14 +29,18 @@ make CROSS_COMPILE=aarch64-linux-gnu- mibox4_defconfig
 make CROSS_COMPILE=aarch64-linux-gnu- -j"$(nproc)"
 ```
 
-The validated output is `u-boot.bin` (BL33). The production LibreELEC target
-installs it as `/u-boot.ext`; Xiaomi's original BL2/BL30/BL31 and early U-Boot
-remain responsible for loading this raw BL33.
+The validated compiler output is `u-boot.bin` (BL33). The production
+LibreELEC target passes it to `amlogic-boot-fip`, combines it with Xiaomi's
+signed BL2/BL30/BL31 stages, and installs the resulting
+`u-boot.bin.sd.bin` through LibreELEC's standard bootloader image path.
 
 The [fip/mibox4/](fip/mibox4/) directory contains the Xiaomi stages under the
 standard names expected by `LibreELEC/amlogic-boot-fip`: `bl2.sign`,
 `bl30.enc`, `bl31.enc`, and the original `bl33.enc`, plus decoded references,
 FIP metadata and `SHA256SUMS`. LibreELEC patch `0004` copies these files into
-the package, encodes the freshly built Mainline BL33, and emits
-`u-boot-fip.bin` as a release/reference artifact. The image continues to use
-the raw `/u-boot.ext`; the generated FIP must not be written directly to eMMC.
+the package and encodes the freshly built Mainline BL33. The image boots this
+full FIP directly; it does not contain or chainload `/u-boot.ext`.
+
+When booting Linux, U-Boot v2025.07 adds its standard `u-boot,version`
+property below `/chosen`. Runtime checks should read that device-tree property
+instead of adding a board-specific kernel command-line argument.
