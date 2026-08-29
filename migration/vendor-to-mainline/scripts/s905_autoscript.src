@@ -1,0 +1,6 @@
+setenv env_addr 0x1040000
+setenv boot_start 'bootm ${loadaddr} - ${dtb_mem_addr}'
+setenv addmac 'if printenv mac; then setenv bootargs ${bootargs} mac=${mac}; elif printenv eth_mac; then setenv bootargs ${bootargs} mac=${eth_mac}; fi'
+setenv try_migration_boot 'if fatload usb ${devnum} ${loadaddr} KERNEL; then if fatload usb ${devnum} ${env_addr} uEnv.ini; then env import -t ${env_addr} ${filesize}; run addmac; if fatload usb ${devnum} ${dtb_mem_addr} ${dtb_name}; then run boot_start; fi; fi; fi'
+usb start
+for devnum in 0 1 2 3; do run try_migration_boot; done

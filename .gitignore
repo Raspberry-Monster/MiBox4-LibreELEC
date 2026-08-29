@@ -8,6 +8,7 @@
 /tools/libreelec-patch-test/
 /tools/libreelec-*/
 /tools/generated-direct-*/
+/tools/python-packages/
 /tools/u-boot-2025.07/
 /tools/u-boot-2025.07.tar.bz2
 /tools/u-boot-direct-*/
@@ -15,3 +16,8 @@
 
 # Generated offline FIP outputs (the source stock extraction remains tracked).
 /bootloader/mibox4-mainline-test/
+
+# Locally generated migration images are large build artifacts.
+/migration/vendor-to-mainline/output/*.img
+/migration/vendor-to-mainline/output/*.img.gz
+/migration/vendor-to-mainline/output/*.manifest.txt
