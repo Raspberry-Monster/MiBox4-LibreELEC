@@ -294,8 +294,6 @@ index 0000000000..dfa71960b9
 + 	}
 + 
 + out_disable:
-+-- 
-+2.51.0
 -- 
 2.51.0
 
@@ -330,7 +328,7 @@ index cd76b47..6939ad7 100755
    echo "info: compressing completed"
  }
  
-@@ -138,6 +148,160 @@ do_umount(){
+@@ -138,6 +148,178 @@ do_umount(){
    done
  }
  
@@ -358,9 +356,27 @@ index cd76b47..6939ad7 100755
 +  [ "${MPT_MAGIC}" = "MPT" ] || \
 +    mibox4_fail "Amlogic MPT not found at 4 MiB"
 +
-+  EMMC_SIZE=$(blockdev --getsize64 "${EMMC}")
-+  [ "${EMMC_SIZE}" -ge 3221225472 ] || \
-+    mibox4_fail "eMMC is smaller than the 3 GiB safety minimum"
++  # LibreELEC images do not necessarily ship util-linux's blockdev.  Use it
++  # when available, but fall back to the kernel's sector count in sysfs.
++  EMMC_SIZE=
++  if command -v blockdev >/dev/null 2>&1; then
++    EMMC_SIZE=$(blockdev --getsize64 "${EMMC}" 2>/dev/null)
++  fi
++  case "${EMMC_SIZE}" in
++    ''|*[!0-9]*)
++      EMMC_NAME=${EMMC##*/}
++      EMMC_SECTORS=$(cat "/sys/class/block/${EMMC_NAME}/size" 2>/dev/null)
++      case "${EMMC_SECTORS}" in
++        ''|*[!0-9]*) mibox4_fail "could not determine eMMC size" ;;
++      esac
++      [ "${EMMC_SECTORS}" -ge 6291456 ] || \
++        mibox4_fail "eMMC is smaller than the 3 GiB safety minimum"
++      ;;
++    *)
++      [ "${EMMC_SIZE}" -ge 3221225472 ] || \
++        mibox4_fail "eMMC is smaller than the 3 GiB safety minimum"
++      ;;
++  esac
 +
 +  AVAILABLE_KIB=$(df -Pk /storage | awk 'NR == 2 { print $4 }')
 +  [ -n "${AVAILABLE_KIB}" ] || \
@@ -491,7 +507,7 @@ index cd76b47..6939ad7 100755
  do_writeprotect(){
    echo  "info: disabling emmc write protection"
    echo 0 > "/sys/block/${EMMC}boot0/force_ro"
-@@ -194,6 +358,7 @@ do_help(){
+@@ -194,6 +376,7 @@ do_help(){
    echo "                (r)esize              : resize the storage partition to 100%"
    echo "                (s)storage            : convert emmc for use as /storage (boot from sdcard)"
    echo "                (z)ero                : zero (erase/wipe) the eMMC module"
@@ -499,7 +515,7 @@ index cd76b47..6939ad7 100755
    echo "                (h)elp                : displays this help message"
    echo ""
  }
-@@ -207,7 +372,7 @@ if [ -z "${EMMC}" ]; then
+@@ -207,7 +390,7 @@ if [ -z "${EMMC}" ]; then
  fi
  
  case $(dtname) in
@@ -508,7 +524,7 @@ index cd76b47..6939ad7 100755
      if [ "${BOOT}" = "${EMMC}" ]; then
        do_info
        echo "Your device is booted from the eMMC module!"
-@@ -222,8 +387,15 @@ case $(dtname) in
+@@ -222,8 +405,15 @@ case $(dtname) in
      ;;
  esac
  
@@ -525,7 +541,7 @@ index cd76b47..6939ad7 100755
      do_backup "$@"
      ;;
    detect|d)
-@@ -249,6 +421,9 @@ case "${1}" in
+@@ -249,6 +439,9 @@ case "${1}" in
    zero|z)
      do_zero
      ;;
