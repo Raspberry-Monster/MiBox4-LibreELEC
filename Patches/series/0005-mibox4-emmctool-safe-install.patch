@@ -1,28 +1,15 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: MiBox4-LibreELEC contributors
-Date: Fri, 28 Aug 2026 16:00:00 +0800
-Subject: [PATCH] emmctool: add bootloader-preserving Mi Box 4 install
+From dac7158e5b90ad13fb945d527a3e72fb47a29ba1 Mon Sep 17 00:00:00 2001
+From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
+Date: Sun, 30 Aug 2026 01:14:24 +0800
+Subject: [PATCH 5/5] emmctool: safely install production Mi Box 4 images
 
-The MDZ-21-AA has a signed vendor boot container at user-area offset 0x200
-and an Amlogic MPT at 4 MiB. A normal whole-image write destroys that boot
-chain, while a generic box image contains no replacement U-Boot.
-
-Add a dedicated install action which migrates the boot files from the
-currently running USB image. Keep the first 512 MiB intact, create an MBR
-plus BOOT/DISK partitions after that boundary, and update uEnv.ini for the
-Mi Box 4 DTB and new filesystem labels.
-
-Before changing the disk, save the preserved user-area prefix and both eMMC
-boot hardware areas to USB /storage. Disable unrelated destructive actions
-on this device. Also correct the existing backup redirection typo.
-
-Signed-off-by: MiBox4-LibreELEC contributors
+Signed-off-by: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 ---
- packages/tools/emmctool/scripts/emmctool | 199 ++++++++++++++++++++++++++++-
- 1 file changed, 196 insertions(+), 3 deletions(-)
+ packages/tools/emmctool/scripts/emmctool | 212 ++++++++++++++++++++++-
+ 1 file changed, 209 insertions(+), 3 deletions(-)
 
 diff --git a/packages/tools/emmctool/scripts/emmctool b/packages/tools/emmctool/scripts/emmctool
-index cd76b47..6939ad7 100755
+index cd76b47b0d286f2edb4e2e5a0360a0ce285536a5..67dd07f0b636a96143f82307d353d09af0f1e4bf 100755
 --- a/packages/tools/emmctool/scripts/emmctool
 +++ b/packages/tools/emmctool/scripts/emmctool
 @@ -3,15 +3,25 @@
@@ -52,7 +39,7 @@ index cd76b47..6939ad7 100755
    echo "info: compressing completed"
  }
  
-@@ -138,6 +148,178 @@ do_umount(){
+@@ -138,6 +148,186 @@ do_umount(){
    done
  }
  
@@ -65,6 +52,11 @@ index cd76b47..6939ad7 100755
 +  [ "$(dtname)" = "xiaomi,mibox4" ] || \
 +    mibox4_fail "the Mi Box 4 installer was invoked on $(dtname)"
 +
++  [ -f /flash/u-boot.ext ] || \
++    mibox4_fail "the production Mainline BL33 is missing from /flash"
++  grep -qw 'mibox4_bl33=mainline' /proc/cmdline || \
++    mibox4_fail "the running system did not boot through Mainline BL33"
++
 +  [ -f /flash/KERNEL ] || mibox4_fail "/flash/KERNEL is missing"
 +  [ -f /flash/s905_autoscript ] || \
 +    mibox4_fail "/flash/s905_autoscript is missing"
@@ -72,6 +64,9 @@ index cd76b47..6939ad7 100755
 +    mibox4_fail "/flash/emmc_autoscript is missing"
 +  [ -f /flash/amlogic/meson-gxlx-mibox4.dtb ] || \
 +    mibox4_fail "the Mi Box 4 DTB is missing from /flash/amlogic"
++  [ -f /flash/uEnv.ini ] || mibox4_fail "/flash/uEnv.ini is missing"
++  grep -q '^dtb_name=/amlogic/meson-gxlx-mibox4.dtb$' /flash/uEnv.ini || \
++    mibox4_fail "the running image is not the dedicated Mi Box 4 board image"
 +
 +  BOOT_MAGIC=$(dd if="${EMMC}" bs=1 skip=528 count=4 2>/dev/null)
 +  MPT_MAGIC=$(dd if="${EMMC}" bs=1 skip=4194304 count=3 2>/dev/null)
@@ -168,7 +163,7 @@ index cd76b47..6939ad7 100755
 +
 +  echo ""
 +  echo "WARNING: This permanently replaces Android system/data with LibreELEC."
-+  echo "The signed bootloader, environment and recovery/boot areas are preserved."
++  echo "The vendor bootloader, environment and recovery/boot areas are preserved."
 +  echo "A mandatory recovery backup will be written to the USB /storage volume."
 +  echo "Type MIBOX4 (uppercase) to continue:"
 +  read -r answer
@@ -231,15 +226,27 @@ index cd76b47..6939ad7 100755
  do_writeprotect(){
    echo  "info: disabling emmc write protection"
    echo 0 > "/sys/block/${EMMC}boot0/force_ro"
-@@ -194,6 +376,7 @@ do_help(){
+@@ -155,6 +345,11 @@ do_write(){
+ 
+   if [ -e "${2}" ]; then
+     case "${2}" in
++      *-mibox4.img.gz|*-mibox4.img)
++        echo "error: Mi Box 4 images must be written to USB first"
++        echo "error: boot that USB image and run: emmctool install"
++        exit 1
++        ;;
+       *box.img.gz|*box.img)
+         echo "error: ${2} is not a bootable image, aborting!"
+         exit 1
+@@ -194,6 +389,7 @@ do_help(){
    echo "                (r)esize              : resize the storage partition to 100%"
    echo "                (s)storage            : convert emmc for use as /storage (boot from sdcard)"
    echo "                (z)ero                : zero (erase/wipe) the eMMC module"
-+  echo "                (x)install            : install from USB on Xiaomi Mi Box 4"
++  echo "                (x)install            : install the running Mi Box 4 USB image"
    echo "                (h)elp                : displays this help message"
    echo ""
  }
-@@ -207,7 +390,7 @@ if [ -z "${EMMC}" ]; then
+@@ -207,7 +403,7 @@ if [ -z "${EMMC}" ]; then
  fi
  
  case $(dtname) in
@@ -248,7 +255,7 @@ index cd76b47..6939ad7 100755
      if [ "${BOOT}" = "${EMMC}" ]; then
        do_info
        echo "Your device is booted from the eMMC module!"
-@@ -222,8 +405,15 @@ case $(dtname) in
+@@ -222,8 +418,15 @@ case $(dtname) in
      ;;
  esac
  
@@ -265,7 +272,7 @@ index cd76b47..6939ad7 100755
      do_backup "$@"
      ;;
    detect|d)
-@@ -249,6 +439,9 @@ case "${1}" in
+@@ -249,6 +452,9 @@ case "${1}" in
    zero|z)
      do_zero
      ;;
@@ -276,4 +283,5 @@ index cd76b47..6939ad7 100755
      do_info
      do_help
 -- 
-2.51.0
+2.55.0.windows.3
+

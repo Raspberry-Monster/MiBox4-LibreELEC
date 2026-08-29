@@ -1,12 +1,9 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: MiBox4-LibreELEC contributors
-Date: Fri, 28 Aug 2026 15:00:00 +0800
-Subject: [PATCH] Amlogic: use Mi Box 4 SoC eFuse WiFi MAC
+From f3a40d5315fea2515b10fd8e4453fc3aa241b600 Mon Sep 17 00:00:00 2001
+From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
+Date: Sun, 30 Aug 2026 01:14:23 +0800
+Subject: [PATCH 2/5] Amlogic: use Mi Box 4 SoC eFuse WiFi MAC
 
-Install the Mi Box 4 MAC fix in the AMLGX kernel patch set used by the
-LibreELEC 12.2 branch.
-
-Signed-off-by: MiBox4-LibreELEC contributors
+Signed-off-by: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 ---
  ...-rtw88-use-mibox4-soc-efuse-wifi-mac.patch | 104 ++++++++++++++++++
  1 file changed, 104 insertions(+)
@@ -14,12 +11,12 @@ Signed-off-by: MiBox4-LibreELEC contributors
 
 diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
 new file mode 100644
-index 0000000000..dfa71960b9
+index 0000000000000000000000000000000000000000..4490997a05d03d74d56c0d1419dd05831c506a85
 --- /dev/null
 +++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
 @@ -0,0 +1,104 @@
 +From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-+From: MiBox4-LibreELEC contributors
++From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 +Date: Fri, 28 Aug 2026 14:00:00 +0800
 +Subject: [PATCH] wifi: rtw88: use Mi Box 4 SoC eFuse MAC address
 +
@@ -36,7 +33,7 @@ index 0000000000..dfa71960b9
 +random address.  This is useful to any rtw88 device whose board-level address
 +is stored outside the Realtek eFuse.
 +
-+Signed-off-by: MiBox4-LibreELEC contributors
++Signed-off-by: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 +---
 + arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts |  9 +++++++++
 + drivers/net/wireless/realtek/rtw88/main.c          | 27 +++++++++++++++++++++++++++
@@ -123,4 +120,5 @@ index 0000000000..dfa71960b9
 + 
 + out_disable:
 -- 
-2.51.0
+2.55.0.windows.3
+

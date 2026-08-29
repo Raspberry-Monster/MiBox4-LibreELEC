@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+#include "meson-gxl-u-boot.dtsi"
+
+&sd_emmc_c {
+	bootph-all;
+};
+
+&uart_AO {
+	bootph-all;
+};

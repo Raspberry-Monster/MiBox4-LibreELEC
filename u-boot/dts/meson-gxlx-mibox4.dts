@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Xiaomi Mi Box 4 (MDZ-21-AA)
+ *
+ * The board is based on the GXLX/S905L P271 design and has 2 GiB RAM,
+ * soldered eMMC, one USB host port, and no Ethernet or SD-card connector.
+ */
+
+/dts-v1/;
+
+#include "meson-gxl-s905x.dtsi"
+#include "meson-gx-p23x-q20x.dtsi"
+
+/ {
+	compatible = "xiaomi,mibox4", "amlogic,p271", "amlogic,s905l",
+		     "amlogic,meson-gxlx";
+	model = "Xiaomi Mi Box 4 (MDZ-21-AA)";
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x0 0x0 0x80000000>;
+	};
+};
+
+&ethmac {
+	status = "disabled";
+};
+
+/* The RTL8723DS SDIO function is not required by U-Boot. */
+&sd_emmc_a {
+	status = "disabled";
+};
+
+/* There is no external SD-card slot. */
+&sd_emmc_b {
+	status = "disabled";
+};
+
+&sd_emmc_c {
+	status = "okay";
+	bus-width = <8>;
+	non-removable;
+	cap-mmc-highspeed;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+};
+
+&uart_AO {
+	status = "okay";
+};
+
+&usb {
+	status = "okay";
+	dr_mode = "host";
+};

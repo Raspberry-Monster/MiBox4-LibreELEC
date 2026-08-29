@@ -55,9 +55,13 @@ Pass build-system settings with `--env`, `-e`, or `--env-file`, for example:
 ```bash
 podman run --rm --log-driver none --userns=keep-id \
   -v "$(pwd)":/build -w /build -it \
-  -e PROJECT=Amlogic -e ARCH=aarch64 -e DEVICE=AMLGX -e UBOOT_SYSTEM=box \
+  -e PROJECT=Amlogic -e ARCH=aarch64 -e DEVICE=AMLGX -e UBOOT_SYSTEM=mibox4 \
   libreelec make image
 ```
+
+This selects the dedicated Mi Box 4 board target and produces an image whose
+name ends in `-mibox4.img.gz`. The image already contains the fixed Mi Box 4
+DTB selection; it is not the AMLGX Generic Box Image.
 
 `--rm` removes the stopped container while retaining the `libreelec` image.
 `--userns=keep-id` maps the host user's UID and GID into the rootless container,

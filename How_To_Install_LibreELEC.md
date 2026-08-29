@@ -1,68 +1,60 @@
 # How to Boot LibreELEC on Mi Box 4
 
-## Requirements
+You will need the dedicated `-mibox4.img.gz` image (not the generic AMLGX
+`-box.img.gz`), a USB drive and hub, and Android Platform Tools.
 
-You will need:
+## Boot from USB
 
-- A USB hub with at least two ports
-- A USB drive
-  - At least 4 GiB if you do not plan to back up the stock system image
-  - 16 GiB or larger is recommended
-- A working computer with [Android Platform Tools](https://developer.android.com/tools/releases/platform-tools) installed
-- A brave and calm mind
-
-## Boot LibreELEC from USB
-
-1. Write the LibreELEC image to the USB drive using Rufus or another disk-imaging tool.
-
-   Rufus is the only tool I have tested.
-
-2. After flashing the image, a FAT32 partition should appear.
-
-3. Open `uEnv.ini` on that partition and replace `@@DTB_NAME@@` with `meson-gxlx-mibox4.dtb`.
-
-   The resulting line should look like this:
-
-   ```ini
-   dtb_name=/amlogic/meson-gxlx-mibox4.dtb
-   ```
-
-4. Connect the USB drive to the USB hub, then connect the hub to the Mi Box 4.
-
-5. Boot the device normally into MIUI TV and enable ADB debugging.
-
-6. From your computer, connect to the Mi Box 4 using:
+1. Write the dedicated image to USB with Rufus, LibreELEC USB-SD Creator, or
+   another disk-imaging tool.
+2. Do not edit `uEnv.ini`. The image already contains
+   `dtb_name=/amlogic/meson-gxlx-mibox4.dtb`, the Mainline BL33
+   `/u-boot.ext`, and the vendor autoscripts.
+3. Connect the USB drive through the hub, enable ADB debugging in Android, and
+   run:
 
    ```bash
    adb connect YOUR_BOX_IP_ADDRESS
-   ```
-
-7. Once the ADB connection has been established, run:
-
-   ```bash
    adb shell reboot update
    ```
 
-   The Mi Box 4 should then reboot into LibreELEC.
+4. After reboot, verify that the formal chain completed:
 
-If you only want to run LibreELEC from USB, you are done.
+   ```bash
+   grep -o 'mibox4_bl33=mainline' /proc/cmdline
+   findmnt /flash
+   findmnt /storage
+   lsblk -o NAME,TRAN,SIZE,FSTYPE,LABEL,MOUNTPOINTS
+   ```
 
-If you want to install LibreELEC to the internal eMMC, continue with the steps below.
+   Both mounts must be on the USB device. The vendor BL2/BL30/BL31 and
+   `s905_autoscript` are still the early stages; Mainline U-Boot is BL33.
 
-## Install LibreELEC to eMMC
+## Install to eMMC
 
-> [!WARNING]
-> Installing LibreELEC to the internal eMMC may brick your device.
-> Back up the original disk image before proceeding.
->
-> **Proceed at your own risk.**
+> Installing to eMMC destroys Android system/data and can brick the device.
+> Keep a complete stock dump and the generated backup on separate storage.
 
-Log in to LibreELEC via SSH, then run the following command in the SSH shell:
+Never use `emmctool write` and never write the image or a FIP directly to eMMC.
+The production installer preserves the vendor boot container and environment.
+The build may publish `u-boot-fip.bin` as a diagnostic/recovery artifact; it
+is not `/u-boot.ext`, is not copied into the boot filesystem, and must not be
+flashed by this installation procedure.
+
+Boot the USB image, confirm the marker and mounts above, then over SSH run:
 
 ```bash
+dtname
+emmctool info
 emmctool install
+# short form: emmctool x
 ```
 
-This installs LibreELEC to the internal eMMC.
+Confirm by typing uppercase `MIBOX4`. The installer requires
+`dtname=xiaomi,mibox4`, `/flash/u-boot.ext`, and
+`mibox4_bl33=mainline`; it backs up the first 512 MiB plus eMMC boot areas,
+preserves the vendor chain, creates `BOOT`/`DISK`, and copies the running
+image. After completion, shut down, remove USB, and cold-power-cycle.
 
-After the installation is complete, shut down the device and unplug the USB drive. The Mi Box 4 should then boot LibreELEC directly from its internal eMMC.
+If anything fails, restore the saved first-512-MiB and boot0/boot1 backups with
+an external recovery workflow. Do not experiment on the live eMMC boot area.

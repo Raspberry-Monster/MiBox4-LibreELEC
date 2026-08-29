@@ -1,0 +1,15 @@
+# Downloaded/build worktrees are local-only and must not enter the repository.
+/tools/amlogic-boot-fip-*/
+/tools/amlogic-boot-fip.tar.gz
+/tools/gxlimg-src/
+/tools/libreelec-12.2-src/
+/tools/libreelec-complete-test*/
+/tools/libreelec-ordered-test/
+/tools/libreelec-patch-test/
+/tools/libreelec-*/
+/tools/u-boot-2025.07/
+/tools/u-boot-2025.07.tar.bz2
+/tools/u-boot-patch-test-empty*/
+
+# Generated offline FIP outputs (the source stock extraction remains tracked).
+/bootloader/mibox4-mainline-test/
