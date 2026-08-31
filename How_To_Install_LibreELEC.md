@@ -38,22 +38,18 @@ eMMC installation.
 
 ## Install to eMMC
 
-Over SSH, inspect the target and start the guarded installer:
+Over SSH, inspect the target and write the complete SBC image to eMMC:
 
 ```bash
 emmctool info
-emmctool install
-# short form: emmctool x
+emmctool write /storage/LibreELEC-AMLGX.aarch64-12.2-mibox4.img.gz
 ```
 
-Confirm by typing uppercase `MIBOX4`. The installer then:
-
-1. validates `/chosen/u-boot,version`, the Mi Box 4 DTB and packaged FIP;
-2. checks the original `@AML` container, MPT and eMMC capacity;
-3. backs up the first 512 MiB plus `boot0` and `boot1` to USB `/storage`;
-4. recreates the BOOT/DISK partitions while restoring preserved metadata;
-5. writes `u-boot.bin.sd.bin` using LibreELEC's split-sector layout;
-6. copies the running LibreELEC boot files and fixes the extlinux labels.
+EMMCTool writes the complete image, expands the DISK partition and updates the
+BOOT/DISK labels using the same path used by other supported Amlogic SBCs.
+The operation replaces the existing partition table, Android data and vendor
+metadata in the eMMC user area; it does not preserve the Xiaomi MPT or recovery
+partitions.
 
 After completion, shut down, remove the external boot device, and cold power
 cycle. If the box does not start, stop and restore the saved user-area and

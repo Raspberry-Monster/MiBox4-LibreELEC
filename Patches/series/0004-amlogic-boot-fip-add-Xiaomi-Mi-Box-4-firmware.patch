@@ -1,11 +1,11 @@
-From 68b34205c89b78811988d401fecd0abd656e0177 Mon Sep 17 00:00:00 2001
-From: MiBox4-LibreELEC contributors <noreply@example.com>
-Date: Sun, 30 Aug 2026 01:39:21 +0800
-Subject: [PATCH 2/3] amlogic-boot-fip: add Mi Box 4 firmware package
+From d16b247c6016d654bee905e08856351a7491a17a Mon Sep 17 00:00:00 2001
+From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
+Date: Mon, 31 Aug 2026 18:10:27 +0800
+Subject: [PATCH 4/6] amlogic-boot-fip: add Xiaomi Mi Box 4 firmware
 
 ---
- .../amlogic-boot-fip/files/mibox4/Makefile    |  35 ++++++++++++++++++
- .../amlogic-boot-fip/files/mibox4/README.md   |  19 ++++++++++
+ .../amlogic-boot-fip/files/mibox4/Makefile    |  37 ++++++++++++++++++
+ .../amlogic-boot-fip/files/mibox4/README.md   |  22 +++++++++++
  .../amlogic-boot-fip/files/mibox4/SHA256SUMS  |  10 +++++
  .../amlogic-boot-fip/files/mibox4/bl2.bin     | Bin 0 -> 49152 bytes
  .../amlogic-boot-fip/files/mibox4/bl2.sign    | Bin 0 -> 49152 bytes
@@ -18,7 +18,7 @@ Subject: [PATCH 2/3] amlogic-boot-fip: add Mi Box 4 firmware package
  .../tools/amlogic-boot-fip/files/mibox4/fip   | Bin 0 -> 15872 bytes
  .../amlogic-boot-fip/files/mibox4/fip.enc     | Bin 0 -> 16384 bytes
  packages/tools/amlogic-boot-fip/package.mk    |   6 +++
- 14 files changed, 70 insertions(+)
+ 14 files changed, 75 insertions(+)
  create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/Makefile
  create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/README.md
  create mode 100644 packages/tools/amlogic-boot-fip/files/mibox4/SHA256SUMS
@@ -35,15 +35,17 @@ Subject: [PATCH 2/3] amlogic-boot-fip: add Mi Box 4 firmware package
 
 diff --git a/packages/tools/amlogic-boot-fip/files/mibox4/Makefile b/packages/tools/amlogic-boot-fip/files/mibox4/Makefile
 new file mode 100644
-index 0000000000000000000000000000000000000000..ca86162414ac7b851c0b58f6bd9158ec71ce1010
+index 0000000..84c11e0
 --- /dev/null
 +++ b/packages/tools/amlogic-boot-fip/files/mibox4/Makefile
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,37 @@
 +# Mi Box 4 GXL FIP packaging using Xiaomi's signed early-stage wrappers.
 +
 +O ?= .
 +TMP ?= .
 +BL33 ?=
++# Reuse the GXL packaging tool shipped in amlogic-boot-fip's P212 directory;
++# keeping it in place avoids duplicating or relocating an upstream asset.
 +AMLICRYPT ?= ../p212/aml_encrypt_gxl
 +QEMU_LD_PREFIX ?= /usr/x86_64-linux-gnu/
 +
@@ -76,10 +78,10 @@ index 0000000000000000000000000000000000000000..ca86162414ac7b851c0b58f6bd9158ec
 +	rm -f ${O}/u-boot.bin.usb.bl2 ${O}/u-boot.bin.usb.tpl
 diff --git a/packages/tools/amlogic-boot-fip/files/mibox4/README.md b/packages/tools/amlogic-boot-fip/files/mibox4/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..f4607c34dfb9420fe95219ff423e7d5693a39521
+index 0000000..600e041
 --- /dev/null
 +++ b/packages/tools/amlogic-boot-fip/files/mibox4/README.md
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,22 @@
 +# Mi Box 4 FIP inputs
 +
 +This directory mirrors the standard file names used by
@@ -93,15 +95,18 @@ index 0000000000000000000000000000000000000000..f4607c34dfb9420fe95219ff423e7d56
 +- `fip`, `fip.enc`: extracted FIP metadata/payload references.
 +- `SHA256SUMS`: hashes of every input.
 +
-+The files are copied from `bootloader/mibox4-stock/extracted`. The board
-+Makefile follows the `LibreELEC/amlogic-boot-fip` interface and emits the full
-+`u-boot.bin`/`u-boot.bin.sd.bin` boot container. LibreELEC writes the SD image
-+to the image boot sectors through its standard `mkimage_uboot` path; no raw
-+BL33 chainload file is used.
++The Makefile intentionally calls P212's existing `aml_encrypt_gxl` binary.
++That binary is reused only as the GXL FIP packaging tool; Mi Box 4 keeps its
++own defconfig, device tree and board implementation, and does not reuse P212
++U-Boot board code.
 +
++The files are copied from `bootloader/mibox4-stock/extracted`. The LibreELEC
++board Makefile follows the `LibreELEC/amlogic-boot-fip` interface and emits a
++complete `u-boot.bin`/`u-boot.bin.sd.bin` boot container. The extracted stage
++files must never be written to eMMC individually.
 diff --git a/packages/tools/amlogic-boot-fip/files/mibox4/SHA256SUMS b/packages/tools/amlogic-boot-fip/files/mibox4/SHA256SUMS
 new file mode 100644
-index 0000000000000000000000000000000000000000..e906c2deec04714e024d83eb84784ae786cbc37d
+index 0000000..e906c2d
 --- /dev/null
 +++ b/packages/tools/amlogic-boot-fip/files/mibox4/SHA256SUMS
 @@ -0,0 +1,10 @@
@@ -30695,7 +30700,7 @@ literal 0
 HcmV?d00001
 
 diff --git a/packages/tools/amlogic-boot-fip/package.mk b/packages/tools/amlogic-boot-fip/package.mk
-index 7e45c85d65101d94137d2cd2fe8073f750fa9ac7..4dfde4f189a54a6557296393671160d9e518a7b2 100644
+index 7e45c85..4dfde4f 100644
 --- a/packages/tools/amlogic-boot-fip/package.mk
 +++ b/packages/tools/amlogic-boot-fip/package.mk
 @@ -15,4 +15,10 @@ post_unpack() {
@@ -30709,3 +30714,6 @@ index 7e45c85d65101d94137d2cd2fe8073f750fa9ac7..4dfde4f189a54a6557296393671160d9
 +    cp -a "${PKG_DIR}/files/mibox4" "${PKG_BUILD}/mibox4"
 +  fi
  }
+-- 
+2.55.0.windows.3
+

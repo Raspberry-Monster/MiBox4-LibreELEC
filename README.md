@@ -33,10 +33,9 @@ persistent environment is never modified.
 
 The image fixes `meson-gxlx-mibox4.dtb` in `extlinux.conf`. U-Boot's standard
 FDT fixup publishes its version as `/chosen/u-boot,version`; no private kernel
-command-line marker is used. The custom EMMCTool installer checks that
-property, backs up the original boot areas, preserves the Xiaomi firmware
-stages inside the newly assembled FIP, and writes the FIP through the same
-split-sector layout used by `mkimage_uboot`.
+command-line marker is used. The resulting image follows LibreELEC's standard
+Amlogic SBC disk layout and can be written to eMMC with `emmctool write`.
+The EMMCTool patch only adds `xiaomi,mibox4` to the supported-board check.
 
 See [bootloader/mibox4-stock/](bootloader/mibox4-stock/) for the extracted
 vendor source, [u-boot/fip/mibox4/](u-boot/fip/mibox4/) for the standard FIP

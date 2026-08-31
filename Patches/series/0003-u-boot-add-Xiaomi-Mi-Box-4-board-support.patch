@@ -1,60 +1,20 @@
-﻿diff --git a/projects/Amlogic/bootloader/install b/projects/Amlogic/bootloader/install
-index 1b6be99d7eeff6db25f941c4be5099a21044c0f5..a6f2c17b56634d77eb4e54321a4baadea8fcf1e5 100644
---- a/projects/Amlogic/bootloader/install
-+++ b/projects/Amlogic/bootloader/install
-@@ -9,7 +9,7 @@ mkdir -p "${DESTDIR}"
- FIPDIR="$(get_build_dir amlogic-boot-fip)"
- 
- case "${UBOOT_SYSTEM}" in
--  box|mibox4|"")
-+  box|"")
-     # no-op, use vendor bootloader
-     ;;
-   *)
-@@ -25,7 +25,7 @@ rm -rf "${INSTALL}"/usr/share/bootloader/u-boot*
- 
- # Install u-boot
- mkdir -p "${INSTALL}/usr/share/bootloader"
--if [ "${UBOOT_SYSTEM}" != "box" ] && [ "${UBOOT_SYSTEM}" != "mibox4" ]; then
-+if [ "${UBOOT_SYSTEM}" != "box" ]; then
-   if [ -f "${DESTDIR}/u-boot.bin.sd.bin" ]; then
-     cp -av "${DESTDIR}/u-boot.bin.sd.bin" "${INSTALL}/usr/share/bootloader"
-     # If target/u-boot exists, cache the signed bin
-diff --git a/projects/Amlogic/bootloader/mkimage b/projects/Amlogic/bootloader/mkimage
-index 2839e06b3b5623f03fe56e319e438c7d249496eb..61be37d9d57aa22529fb551f85ca446824379015 100644
---- a/projects/Amlogic/bootloader/mkimage
-+++ b/projects/Amlogic/bootloader/mkimage
-@@ -69,22 +69,12 @@ case "${UBOOT_SYSTEM}" in
-     mkimage_bootini
-     mkimage_dtb
-     ;;
--  mibox4)
--    # Keep the production image on Xiaomi's early boot chain until the
--    # board-specific mainline BL33 has completed recoverable hardware testing.
--    # Package only its fixed boot configuration and vendor-U-Boot autoscripts.
--    mkimage_uEnv
--    mkimage_autoscripts
--    mkimage_bootini
--    mkimage_extlinux
--    mkimage_dtb
--    ;;
-   odroid-n2|odroid-c4)
-     mkimage_uboot
-     mkimage_extlinux_fdtdir
-     mkimage_dtb
-     ;;
--  bananapi*|khadas*|lafrite|lepotato|nanopi-k2|odroid*|radxa*|wetek*)
-+  bananapi*|khadas*|lafrite|lepotato|mibox4|nanopi-k2|odroid*|radxa*|wetek*)
-     mkimage_uboot
-     mkimage_extlinux
-     mkimage_dtb
+From 3d25fdfc3284ada638ecee6f3779baf496363b74 Mon Sep 17 00:00:00 2001
+From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
+Date: Mon, 31 Aug 2026 18:09:50 +0800
+Subject: [PATCH 3/6] u-boot: add Xiaomi Mi Box 4 board support
+
+---
+ .../u-boot-0003-LOCAL-add-xiaomi-mibox4.patch | 190 ++++++++++++++++++
+ 1 file changed, 190 insertions(+)
+ create mode 100644 projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
+
 diff --git a/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch b/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
 new file mode 100644
-index 0000000000000000000000000000000000000000..8254b01570198d2b1a497728f2acc20a13e1d724
+index 0000000..b90f34e
 --- /dev/null
 +++ b/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
 @@ -0,0 +1,190 @@
-+﻿diff --git a/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
++diff --git a/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
 +new file mode 100644
 +index 0000000000000000000000000000000000000000..f15e7e76520f55dd00ad1025dd5d4a0e9ad08ca1
 +--- /dev/null
@@ -244,16 +204,6 @@ index 0000000000000000000000000000000000000000..8254b01570198d2b1a497728f2acc20a
 ++	status = "okay";
 ++	dr_mode = "host";
 ++};
-diff --git a/scripts/uboot_helper b/scripts/uboot_helper
-index 0ae343a481aa31949c8c767893b3fc1d91dec805..691204a57491f9919087907796a74f2d169e6999 100755
---- a/scripts/uboot_helper
-+++ b/scripts/uboot_helper
-@@ -206,7 +206,7 @@ devices = \
-       },
-       'mibox4': {
-         'dtb': 'meson-gxlx-mibox4.dtb',
--        'config': 'p212_defconfig'
-+        'config': 'mibox4_defconfig'
-       },
-       'nanopi-k2': {
-         'dtb': 'meson-gxbb-nanopi-k2.dtb',
+-- 
+2.55.0.windows.3
+

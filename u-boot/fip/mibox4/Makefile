@@ -3,6 +3,8 @@
 O ?= .
 TMP ?= .
 BL33 ?=
+# Reuse the GXL packaging tool shipped in amlogic-boot-fip's P212 directory;
+# keeping it in place avoids duplicating or relocating an upstream asset.
 AMLICRYPT ?= ../p212/aml_encrypt_gxl
 QEMU_LD_PREFIX ?= /usr/x86_64-linux-gnu/
 

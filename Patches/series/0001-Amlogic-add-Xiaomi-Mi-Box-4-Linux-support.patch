@@ -1,64 +1,17 @@
-From d6a7fab0769dd43c5e81e3094fc8234c2c4fe331 Mon Sep 17 00:00:00 2001
+From ef881376393b988ac7867f59917e758b68b824d5 Mon Sep 17 00:00:00 2001
 From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
-Date: Sun, 30 Aug 2026 01:14:23 +0800
-Subject: [PATCH 1/5] Amlogic: add Xiaomi Mi Box 4 with RTL8723DS
+Date: Mon, 31 Aug 2026 18:09:02 +0800
+Subject: [PATCH 1/6] Amlogic: add Xiaomi Mi Box 4 Linux support
 
-Signed-off-by: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 ---
- projects/Amlogic/bootloader/install           |   4 +-
- projects/Amlogic/bootloader/mkimage           |  10 ++
  projects/Amlogic/config/kernel-firmware.dat   |   1 +
  ...rm64-dts-add-xiaomi-mibox4-rtl8723ds.patch | 139 ++++++++++++++++++
  projects/Amlogic/linux/linux.aarch64.conf     |   2 +-
- scripts/uboot_helper                          |   4 +
- 6 files changed, 157 insertions(+), 3 deletions(-)
+ 3 files changed, 141 insertions(+), 1 deletion(-)
  create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
 
-diff --git a/projects/Amlogic/bootloader/install b/projects/Amlogic/bootloader/install
-index a6f2c17b56634d77eb4e54321a4baadea8fcf1e5..1b6be99d7eeff6db25f941c4be5099a21044c0f5 100644
---- a/projects/Amlogic/bootloader/install
-+++ b/projects/Amlogic/bootloader/install
-@@ -9,7 +9,7 @@ mkdir -p "${DESTDIR}"
- FIPDIR="$(get_build_dir amlogic-boot-fip)"
- 
- case "${UBOOT_SYSTEM}" in
--  box|"")
-+  box|mibox4|"")
-     # no-op, use vendor bootloader
-     ;;
-   *)
-@@ -25,7 +25,7 @@ rm -rf "${INSTALL}"/usr/share/bootloader/u-boot*
- 
- # Install u-boot
- mkdir -p "${INSTALL}/usr/share/bootloader"
--if [ "${UBOOT_SYSTEM}" != "box" ]; then
-+if [ "${UBOOT_SYSTEM}" != "box" ] && [ "${UBOOT_SYSTEM}" != "mibox4" ]; then
-   if [ -f "${DESTDIR}/u-boot.bin.sd.bin" ]; then
-     cp -av "${DESTDIR}/u-boot.bin.sd.bin" "${INSTALL}/usr/share/bootloader"
-     # If target/u-boot exists, cache the signed bin
-diff --git a/projects/Amlogic/bootloader/mkimage b/projects/Amlogic/bootloader/mkimage
-index 282600bd55fe0dbfc1c600c9737d5fff36df28fa..2839e06b3b5623f03fe56e319e438c7d249496eb 100644
---- a/projects/Amlogic/bootloader/mkimage
-+++ b/projects/Amlogic/bootloader/mkimage
-@@ -69,6 +69,16 @@ case "${UBOOT_SYSTEM}" in
-     mkimage_bootini
-     mkimage_dtb
-     ;;
-+  mibox4)
-+    # Keep the production image on Xiaomi's early boot chain until the
-+    # board-specific mainline BL33 has completed recoverable hardware testing.
-+    # Package only its fixed boot configuration and vendor-U-Boot autoscripts.
-+    mkimage_uEnv
-+    mkimage_autoscripts
-+    mkimage_bootini
-+    mkimage_extlinux
-+    mkimage_dtb
-+    ;;
-   odroid-n2|odroid-c4)
-     mkimage_uboot
-     mkimage_extlinux_fdtdir
 diff --git a/projects/Amlogic/config/kernel-firmware.dat b/projects/Amlogic/config/kernel-firmware.dat
-index 4896c49f9168561d26e5079476a4094d3e0a5e3a..fde7e8cad5483d3e661660cd19467a5879078eee 100644
+index 4896c49..fde7e8c 100644
 --- a/projects/Amlogic/config/kernel-firmware.dat
 +++ b/projects/Amlogic/config/kernel-firmware.dat
 @@ -12,6 +12,7 @@ rtlwifi/rtl8192cufw_TMSC.bin
@@ -71,7 +24,7 @@ index 4896c49f9168561d26e5079476a4094d3e0a5e3a..fde7e8cad5483d3e661660cd19467a58
  rtw88/rtw8822c_wow_fw.bin
 diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
 new file mode 100644
-index 0000000000000000000000000000000000000000..e1fc9a8c9b95905620ac41bf26a5888969dc61b6
+index 0000000..e1fc9a8
 --- /dev/null
 +++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
 @@ -0,0 +1,139 @@
@@ -215,7 +168,7 @@ index 0000000000000000000000000000000000000000..e1fc9a8c9b95905620ac41bf26a58889
 ++	};
 ++};
 diff --git a/projects/Amlogic/linux/linux.aarch64.conf b/projects/Amlogic/linux/linux.aarch64.conf
-index 8617860fc481b570c082a915b1b78d22cbe76b2b..676965cc75808e44c342579611aded9f83f1275e 100644
+index 8617860..676965c 100644
 --- a/projects/Amlogic/linux/linux.aarch64.conf
 +++ b/projects/Amlogic/linux/linux.aarch64.conf
 @@ -2698,7 +2698,7 @@ CONFIG_RTW88_8822BU=m
@@ -227,21 +180,6 @@ index 8617860fc481b570c082a915b1b78d22cbe76b2b..676965cc75808e44c342579611aded9f
  # CONFIG_RTW88_8723CS is not set
  CONFIG_RTW88_8723DU=m
  # CONFIG_RTW88_8821CE is not set
-diff --git a/scripts/uboot_helper b/scripts/uboot_helper
-index 469374170ef12cfdd9a78c918ae31a4026ab02c7..0ae343a481aa31949c8c767893b3fc1d91dec805 100755
---- a/scripts/uboot_helper
-+++ b/scripts/uboot_helper
-@@ -204,6 +204,10 @@ devices = \
-         'dtb': 'meson-gxl-s905x-libretech-cc.dtb',
-         'config': 'libretech-cc_defconfig'
-       },
-+      'mibox4': {
-+        'dtb': 'meson-gxlx-mibox4.dtb',
-+        'config': 'p212_defconfig'
-+      },
-       'nanopi-k2': {
-         'dtb': 'meson-gxbb-nanopi-k2.dtb',
-         'config': 'nanopi-k2_defconfig'
 -- 
 2.55.0.windows.3
 

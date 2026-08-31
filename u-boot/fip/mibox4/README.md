@@ -11,6 +11,11 @@ LibreELEC/amlogic-boot-fip for the GXL firmware image package:
 - `fip`, `fip.enc`: extracted FIP metadata/payload references.
 - `SHA256SUMS`: hashes of every input.
 
+The Makefile intentionally calls P212's existing `aml_encrypt_gxl` binary.
+That binary is reused only as the GXL FIP packaging tool; Mi Box 4 keeps its
+own defconfig, device tree and board implementation, and does not reuse P212
+U-Boot board code.
+
 The files are copied from `bootloader/mibox4-stock/extracted`. The LibreELEC
 board Makefile follows the `LibreELEC/amlogic-boot-fip` interface and emits a
 complete `u-boot.bin`/`u-boot.bin.sd.bin` boot container. The extracted stage
