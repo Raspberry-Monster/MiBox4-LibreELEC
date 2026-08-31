@@ -4,6 +4,22 @@ This repository contains LibreELEC 12.2 support for Xiaomi Mi Box 4
 (MDZ-21-AA), including the board device tree, RTL8723DS/eFuse MAC support,
 and a production Mainline U-Boot FIP integration.
 
+The board DTS is independent from the P23x/Q20x/P271 reference-board DTSI.
+It reports the hardware as `Xiaomi Mi Box 4 (MDZ-21-AA)`, describes all four
+vendor eFuse fields (Ethernet, Bluetooth, WLAN, and USID), and currently
+exposes HDMI as the only audio output. Analog/CVBS audio and video are not
+enabled.
+
+RTL8723DS Bluetooth wiring is documented in the DTS, but its UART and child
+node intentionally remain disabled. The required board-matching Bluetooth
+firmware/configuration is not available from upstream `linux-firmware`, so
+this repository does not add a private Bluetooth firmware patch to
+LibreELEC. Wi-Fi remains enabled and uses `rtw88/rtw8723d_fw.bin`.
+
+The front-panel power LED is GPIOX_6, active high. Mainline U-Boot explicitly
+turns it on during `board_init()`, matching Xiaomi BL33, and Linux keeps it on
+through the standard `gpio-leds` binding.
+
 For a one-step integration, apply
 [Patches/LibreELEC-12.2-MiBox4-all-in-one.patch](Patches/LibreELEC-12.2-MiBox4-all-in-one.patch):
 

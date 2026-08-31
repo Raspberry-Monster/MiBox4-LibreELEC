@@ -4,67 +4,29 @@ Date: Mon, 31 Aug 2026 18:09:27 +0800
 Subject: [PATCH 2/6] wifi: derive Mi Box 4 MAC from Meson eFuse
 
 ---
- ...-rtw88-use-mibox4-soc-efuse-wifi-mac.patch | 104 ++++++++++++++++++
- 1 file changed, 104 insertions(+)
+ ...-rtw88-use-mibox4-soc-efuse-wifi-mac.patch | 69 +++++++++++++++++++
+ 1 file changed, 69 insertions(+)
  create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
-
 diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
 new file mode 100644
-index 0000000..4490997
+index 0000000..1111111
 --- /dev/null
 +++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
-@@ -0,0 +1,104 @@
+@@ -0,0 +1,69 @@
 +From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 +From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 +Date: Fri, 28 Aug 2026 14:00:00 +0800
 +Subject: [PATCH] wifi: rtw88: use Mi Box 4 SoC eFuse MAC address
 +
-+The RTL8723DS module in Xiaomi Mi Box 4 does not expose a valid address in
-+the eFuse map consumed by rtw88.  rtw88 consequently creates a new random
-+address on every probe.
-+
-+The vendor device tree identifies the board WLAN address as the six-byte
-+mac_wifi key at offset 0x0c in the Meson GX SoC eFuse. Describe that area as
-+an nvmem cell and attach it to the SDIO function using the standard
-+mac-address cell name.
-+
-+Make rtw88 consult the device-tree MAC address before falling back to a
-+random address.  This is useful to any rtw88 device whose board-level address
-+is stored outside the Realtek eFuse.
++The Mi Box 4 board DTS describes Xiaomi's six-byte mac_wifi eFuse key as a
++standard mac-address NVMEM cell attached to the RTL8723DS SDIO function.
++Make rtw88 consult that board address when the module eFuse is invalid before
++falling back to a random address.
 +
 +Signed-off-by: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 +---
-+ arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts |  9 +++++++++
-+ drivers/net/wireless/realtek/rtw88/main.c          | 27 +++++++++++++++++++++++++++
-+ 2 files changed, 36 insertions(+), 2 deletions(-)
-+
-+diff --git a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
-+index 1b457a6..d48d305 100644
-+--- a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
-++++ b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
-+@@ -79,6 +79,13 @@ &vdec {
-+ 	compatible = "amlogic,gxlx-vdec", "amlogic,gx-vdec";
-+ };
-+ 
-++/* WLAN MAC stored by the vendor boot firmware in the SoC eFuse. */
-++&efuse {
-++	wifi_mac: wifi-mac@c {
-++		reg = <0x0c 0x06>;
-++	};
-++};
-++
-+ /* The Mi Box 4 has neither an Ethernet connector nor an SD card slot. */
-+ &ethmac {
-+ 	status = "disabled";
-+@@ -114,6 +121,8 @@ &sd_emmc_a {
-+ 	rtl8723ds: wifi@1 {
-+ 		reg = <1>;
-++		nvmem-cells = <&wifi_mac>;
-++		nvmem-cell-names = "mac-address";
-+ 		interrupt-parent = <&gpio_intc>;
-+ 		/* vendor GPIO 0x56 = GPIOX_7 = GPIO interrupt 96 */
-+ 		interrupts = <96 IRQ_TYPE_LEVEL_HIGH>;
-+ 		interrupt-names = "host-wake";
++ drivers/net/wireless/realtek/rtw88/main.c | 27 ++++++++++++++++++++++++
++ 1 file changed, 27 insertions(+), 2 deletions(-)
 +diff --git a/drivers/net/wireless/realtek/rtw88/main.c b/drivers/net/wireless/realtek/rtw88/main.c
 +index c4de5d1..6cc40ed 100644
 +--- a/drivers/net/wireless/realtek/rtw88/main.c
@@ -118,6 +80,7 @@ index 0000000..4490997
 + 	}
 + 
 + out_disable:
--- 
++--
++2.55.0.windows.3
+--
 2.55.0.windows.3
-

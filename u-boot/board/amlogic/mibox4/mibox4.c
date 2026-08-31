@@ -11,6 +11,7 @@
 
 #include <asm/io.h>
 #include <init.h>
+#include <led.h>
 #include <linux/bitops.h>
 
 #define MIBOX4_GPIOAO_4_EN_N	BIT(4)
@@ -24,6 +25,15 @@ static void mibox4_enable_hdmi_usb_power(void)
 			MIBOX4_GPIOAO_4_OUT);
 }
 
+static void mibox4_enable_power_led(void)
+{
+	struct udevice *dev;
+
+	/* Xiaomi's BL33 drives GPIOX_6 high during normal startup. */
+	if (!led_get_by_label("mibox4:power", &dev))
+		led_set_state(dev, LEDST_ON);
+}
+
 int board_early_init_f(void)
 {
 	mibox4_enable_hdmi_usb_power();
@@ -33,5 +43,6 @@ int board_early_init_f(void)
 int board_init(void)
 {
 	mibox4_enable_hdmi_usb_power();
+	mibox4_enable_power_led();
 	return 0;
 }

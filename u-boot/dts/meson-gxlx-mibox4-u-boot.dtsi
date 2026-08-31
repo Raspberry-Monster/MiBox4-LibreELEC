@@ -2,6 +2,23 @@
 
 #include "meson-gxl-u-boot.dtsi"
 
+&hdmi_usb_5v {
+	bootph-all;
+};
+
+&leds {
+	bootph-all;
+};
+
+&power_led {
+	bootph-all;
+};
+
+/* U-Boot does not need to enumerate the soldered SDIO Wi-Fi function. */
+&sd_emmc_a {
+	status = "disabled";
+};
+
 &sd_emmc_c {
 	bootph-all;
 };
