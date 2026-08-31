@@ -22,6 +22,13 @@ debug support, but physical UART access requires soldering on the Mi Box 4 and
 is not required or assumed for validation. LibreELEC loads its separate kernel
 DTB for Linux, where Wi-Fi and other peripherals remain enabled.
 
+The dedicated board code also reproduces Xiaomi BL33's
+`gpio set gpioao_4 1` before USB probing. On verified hardware a cold boot
+left register `0xc8100024` at `0xbfff3fff`; changing it to `0xbfff3fef`
+immediately powered both HDMI and the USB hub. `board_early_init_f()` applies
+that transition before relocation, and `board_init()` repeats it as a
+defensive fallback.
+
 For a standalone build with an AArch64 cross-toolchain:
 
 ```sh

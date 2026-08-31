@@ -1,17 +1,4 @@
-From 4b0d1a51b183ebafa6a1ee2f84bff642bf078373 Mon Sep 17 00:00:00 2001
-From: MiBox4-LibreELEC contributors <noreply@example.com>
-Date: Sun, 30 Aug 2026 01:38:20 +0800
-Subject: [PATCH 1/3] Amlogic: add direct-boot Mi Box 4 U-Boot
-
----
- projects/Amlogic/bootloader/install           |   4 +-
- projects/Amlogic/bootloader/mkimage           |  12 +-
- .../u-boot-0003-LOCAL-add-xiaomi-mibox4.patch | 136 ++++++++++++++++++
- scripts/uboot_helper                          |   2 +-
- 4 files changed, 140 insertions(+), 14 deletions(-)
- create mode 100644 projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
-
-diff --git a/projects/Amlogic/bootloader/install b/projects/Amlogic/bootloader/install
+﻿diff --git a/projects/Amlogic/bootloader/install b/projects/Amlogic/bootloader/install
 index 1b6be99d7eeff6db25f941c4be5099a21044c0f5..a6f2c17b56634d77eb4e54321a4baadea8fcf1e5 100644
 --- a/projects/Amlogic/bootloader/install
 +++ b/projects/Amlogic/bootloader/install
@@ -63,17 +50,87 @@ index 2839e06b3b5623f03fe56e319e438c7d249496eb..61be37d9d57aa22529fb551f85ca4468
      mkimage_dtb
 diff --git a/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch b/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
 new file mode 100644
-index 0000000000000000000000000000000000000000..d08b2c667a466ec04feb3284e9ca8b5e98e85ff8
+index 0000000000000000000000000000000000000000..8254b01570198d2b1a497728f2acc20a13e1d724
 --- /dev/null
 +++ b/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
-@@ -0,0 +1,136 @@
+@@ -0,0 +1,190 @@
++﻿diff --git a/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
++new file mode 100644
++index 0000000000000000000000000000000000000000..f15e7e76520f55dd00ad1025dd5d4a0e9ad08ca1
++--- /dev/null
+++++ b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
++@@ -0,0 +1,11 @@
+++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++
+++#include "meson-gxl-u-boot.dtsi"
+++
+++&sd_emmc_c {
+++	bootph-all;
+++};
+++
+++&uart_AO {
+++	bootph-all;
+++};
++diff --git a/board/amlogic/mibox4/Makefile b/board/amlogic/mibox4/Makefile
++new file mode 100644
++index 0000000000000000000000000000000000000000..4027409c2f34e24f1261f08bd68d263dd84f12cf
++--- /dev/null
+++++ b/board/amlogic/mibox4/Makefile
++@@ -0,0 +1,3 @@
+++# SPDX-License-Identifier: GPL-2.0+
+++
+++obj-y := mibox4.o
++diff --git a/board/amlogic/mibox4/mibox4.c b/board/amlogic/mibox4/mibox4.c
++new file mode 100644
++index 0000000000000000000000000000000000000000..e02d60fef22401784502d11824f8067294abeb36
++--- /dev/null
+++++ b/board/amlogic/mibox4/mibox4.c
++@@ -0,0 +1,37 @@
+++// SPDX-License-Identifier: GPL-2.0+
+++/*
+++ * Xiaomi Mi Box 4 (MDZ-21-AA) board support
+++ *
+++ * A cold boot leaves GPIOAO_4 as an input and the shared HDMI/USB supply
+++ * disabled.  Xiaomi's BL33 executes "gpio set gpioao_4 1".  Reproduce the
+++ * resulting register state verified on hardware:
+++ *
+++ *   0xc8100024: 0xbfff3fff -> 0xbfff3fef
+++ */
+++
+++#include <asm/io.h>
+++#include <init.h>
+++#include <linux/bitops.h>
+++
+++#define MIBOX4_GPIOAO_4_EN_N	BIT(4)
+++#define MIBOX4_GPIOAO_4_OUT	BIT(20)
+++#define MIBOX4_AO_GPIO_O_EN_N	((void __iomem *)0xc8100024)
+++
+++static void mibox4_enable_hdmi_usb_power(void)
+++{
+++	clrsetbits_le32(MIBOX4_AO_GPIO_O_EN_N,
+++			MIBOX4_GPIOAO_4_EN_N | MIBOX4_GPIOAO_4_OUT,
+++			MIBOX4_GPIOAO_4_OUT);
+++}
+++
+++int board_early_init_f(void)
+++{
+++	mibox4_enable_hdmi_usb_power();
+++	return 0;
+++}
+++
+++int board_init(void)
+++{
+++	mibox4_enable_hdmi_usb_power();
+++	return 0;
+++}
 +diff --git a/configs/mibox4_defconfig b/configs/mibox4_defconfig
 +new file mode 100644
-+index 0000000..ecff30f
++index 0000000000000000000000000000000000000000..fc7c59e399b2060f9c7717183baf3c464a94a839
 +--- /dev/null
 ++++ b/configs/mibox4_defconfig
-+@@ -0,0 +1,52 @@
++@@ -0,0 +1,54 @@
 ++CONFIG_ARM=y
+++CONFIG_SYS_BOARD="mibox4"
 ++CONFIG_ARCH_MESON=y
 ++CONFIG_TEXT_BASE=0x01000000
 ++CONFIG_NR_DRAM_BANKS=1
@@ -82,6 +139,7 @@ index 0000000000000000000000000000000000000000..d08b2c667a466ec04feb3284e9ca8b5e
 ++CONFIG_ENV_SIZE=0x2000
 ++CONFIG_ENV_IS_NOWHERE=y
 ++CONFIG_BOOTCOMMAND="setenv boot_targets usb0 mmc0; run distro_bootcmd"
+++CONFIG_BOARD_EARLY_INIT_F=y
 ++CONFIG_DM_GPIO=y
 ++CONFIG_DEFAULT_DEVICE_TREE="amlogic/meson-gxlx-mibox4"
 ++CONFIG_OF_LIBFDT_OVERLAY=y
@@ -127,7 +185,7 @@ index 0000000000000000000000000000000000000000..d08b2c667a466ec04feb3284e9ca8b5e
 ++CONFIG_USB_DWC3_MESON_GXL=y
 +diff --git a/dts/upstream/src/arm64/amlogic/meson-gxlx-mibox4.dts b/dts/upstream/src/arm64/amlogic/meson-gxlx-mibox4.dts
 +new file mode 100644
-+index 0000000..834ce93
++index 0000000000000000000000000000000000000000..834ce938d5b3d1ad92e689d2c71aa262716cab8c
 +--- /dev/null
 ++++ b/dts/upstream/src/arm64/amlogic/meson-gxlx-mibox4.dts
 +@@ -0,0 +1,55 @@
@@ -185,23 +243,6 @@ index 0000000000000000000000000000000000000000..d08b2c667a466ec04feb3284e9ca8b5e
 ++&usb {
 ++	status = "okay";
 ++	dr_mode = "host";
-++};
-+diff --git a/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
-+new file mode 100644
-+index 0000000..f15e7e7
-+--- /dev/null
-++++ b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
-+@@ -0,0 +1,11 @@
-++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
-++
-++#include "meson-gxl-u-boot.dtsi"
-++
-++&sd_emmc_c {
-++	bootph-all;
-++};
-++
-++&uart_AO {
-++	bootph-all;
 ++};
 diff --git a/scripts/uboot_helper b/scripts/uboot_helper
 index 0ae343a481aa31949c8c767893b3fc1d91dec805..691204a57491f9919087907796a74f2d169e6999 100755
