@@ -4,14 +4,56 @@ Date: Mon, 31 Aug 2026 18:09:27 +0800
 Subject: [PATCH 2/6] wifi: derive Mi Box 4 MAC from Meson eFuse
 
 ---
- ...-rtw88-use-mibox4-soc-efuse-wifi-mac.patch | 55 +++++++++++++++++++
- 1 file changed, 55 insertions(+)
- create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
-diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
+ ...ice_get_mac_address-to-use-NVMEM.patch | 33 ++++++++++++++
+ ...-rtw88-use-mibox4-soc-efuse-wifi-mac.patch | 55 ++++++++++++++++++++++
+ 2 files changed, 88 insertions(+)
+ create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-BACKPORT-ethernet-Extend-device_get_mac_address-to-use-NVMEM.patch
+ create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0100-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
+
+diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-BACKPORT-ethernet-Extend-device_get_mac_address-to-use-NVMEM.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-BACKPORT-ethernet-Extend-device_get_mac_address-to-use-NVMEM.patch
 new file mode 100644
 index 0000000..1111111
 --- /dev/null
-+++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
++++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-BACKPORT-ethernet-Extend-device_get_mac_address-to-use-NVMEM.patch
+@@ -0,0 +1,33 @@
++From d2d3f529e7b6ff2aa432b16a2317126621c28058 Mon Sep 17 00:00:00 2001
++From: Stefan Wahren <wahrenst@gmx.net>
++Date: Fri, 12 Sep 2025 16:03:32 +0200
++Subject: [PATCH] ethernet: Extend device_get_mac_address() to use NVMEM
++
++A lot of modern SoCs can store MAC addresses in NVMEM. Extend the generic
++device_get_mac_address() helper to obtain the address from an NVMEM cell
++named "mac-address" when firmware-node properties do not provide one.
++
++Signed-off-by: Stefan Wahren <wahrenst@gmx.net>
++Reviewed-by: Andrew Lunn <andrew@lunn.ch>
++Link: https://patch.msgid.link/20250912140332.35395-3-wahrenst@gmx.net
++Signed-off-by: Jakub Kicinski <kuba@kernel.org>
++---
++ net/ethernet/eth.c | 5 ++++-
++ 1 file changed, 4 insertions(+), 1 deletion(-)
++
++diff --git a/net/ethernet/eth.c b/net/ethernet/eth.c
++index d562db5d04ee..b14228b3f78e 100644
++--- a/net/ethernet/eth.c
+++++ b/net/ethernet/eth.c
++@@ -614,5 +614,8 @@ EXPORT_SYMBOL(fwnode_get_mac_address);
++ int device_get_mac_address(struct device *dev, char *addr)
++ {
++-	return fwnode_get_mac_address(dev_fwnode(dev), addr);
+++	if (!fwnode_get_mac_address(dev_fwnode(dev), addr))
+++		return 0;
+++
+++	return nvmem_get_mac_address(dev, addr);
++ }
++ EXPORT_SYMBOL(device_get_mac_address);
++--
++2.55.0.windows.3
+diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0100-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0100-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0100-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
 @@ -0,0 +1,55 @@
 +From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 +From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
