@@ -19,22 +19,21 @@ over Xiaomi's vendor `env` partition.
 Linux and U-Boot use the same standalone Mi Box 4 board description instead
 of inheriting the P23x/Q20x/P271 board DTSI. The U-Boot overlay disables the
 soldered SDIO Wi-Fi bus so eMMC remains the only MMC boot target and marks the
-eMMC, AO UART, shared HDMI/USB regulator, and front-panel LED for U-Boot use.
+eMMC and AO UART for U-Boot use.
 Physical UART access requires soldering and is not required or assumed for
 validation. LibreELEC loads its separate copy of the board DTB for Linux,
 where Wi-Fi and other supported peripherals are enabled.
 
-The dedicated board code also reproduces Xiaomi BL33's
-`gpio set gpioao_4 1` before USB probing. On verified hardware a cold boot
-left register `0xc8100024` at `0xbfff3fff`; changing it to `0xbfff3fef`
-immediately powered both HDMI and the USB hub. `board_early_init_f()` applies
-that transition before relocation, and `board_init()` repeats it as a
-defensive fallback.
+The U-Boot control DTS reproduces Xiaomi BL33's `gpio set gpioao_4 1` with an
+active-high GPIOAO_4 hog. On verified hardware a cold boot left register
+`0xc8100024` at `0xbfff3fff`; driving that line high changes it to
+`0xbfff3fef` and powers both HDMI and the USB hub. `CONFIG_GPIO_HOG` applies
+the state during normal U-Boot driver-model initialization; no early-init
+hook or board-specific register write is used.
 
-Xiaomi BL33 also executes `gpio set gpiox_6 1`. The common DTS represents
-GPIOX_6 as an active-high power LED with `default-state = "on"`, while
-`board_init()` explicitly probes and turns on `mibox4:power`. This avoids
-depending on incidental LED-driver probe order during U-Boot startup.
+Xiaomi BL33 also executes `gpio set gpiox_6 1`. The U-Boot overlay owns
+GPIOX_6 with an output-high GPIO hog. The Linux DTB remains separate and
+represents the same line as an active-high `gpio-leds` power LED.
 
 For a standalone build with an AArch64 cross-toolchain:
 

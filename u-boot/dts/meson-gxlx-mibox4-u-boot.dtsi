@@ -2,16 +2,40 @@
 
 #include "meson-gxl-u-boot.dtsi"
 
+/* Xiaomi BL33 drives both lines high during normal startup. */
+&gpio {
+	power-led-hog {
+		gpio-hog;
+		gpios = <GPIOX_6 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "mibox4-power-led";
+	};
+};
+
+&gpio_ao {
+	hdmi-usb-5v-hog {
+		gpio-hog;
+		gpios = <GPIOAO_4 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "mibox4-hdmi-usb-5v";
+	};
+};
+
+/* The hog owns these GPIOs in U-Boot; Linux uses the semantic devices. */
 &hdmi_usb_5v {
-	bootph-all;
+	status = "disabled";
 };
 
 &leds {
-	bootph-all;
+	status = "disabled";
 };
 
-&power_led {
-	bootph-all;
+&hdmi_tx {
+	/delete-property/ hdmi-supply;
+};
+
+&usb2_phy0 {
+	/delete-property/ phy-supply;
 };
 
 /* U-Boot does not need to enumerate the soldered SDIO Wi-Fi function. */

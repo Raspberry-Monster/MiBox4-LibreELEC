@@ -4,15 +4,15 @@ Date: Mon, 31 Aug 2026 18:09:27 +0800
 Subject: [PATCH 2/6] wifi: derive Mi Box 4 MAC from Meson eFuse
 
 ---
- ...-rtw88-use-mibox4-soc-efuse-wifi-mac.patch | 69 +++++++++++++++++++
- 1 file changed, 69 insertions(+)
+ ...-rtw88-use-mibox4-soc-efuse-wifi-mac.patch | 55 +++++++++++++++++++
+ 1 file changed, 55 insertions(+)
  create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
 diff --git a/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
 new file mode 100644
 index 0000000..1111111
 --- /dev/null
 +++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,55 @@
 +From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 +From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 +Date: Fri, 28 Aug 2026 14:00:00 +0800
@@ -25,57 +25,43 @@ index 0000000..1111111
 +
 +Signed-off-by: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 +---
-+ drivers/net/wireless/realtek/rtw88/main.c | 27 ++++++++++++++++++++++++
-+ 1 file changed, 27 insertions(+), 2 deletions(-)
++ drivers/net/wireless/realtek/rtw88/main.c | 15 +++++++++++++--
++ 1 file changed, 13 insertions(+), 2 deletions(-)
 +diff --git a/drivers/net/wireless/realtek/rtw88/main.c b/drivers/net/wireless/realtek/rtw88/main.c
 +index c4de5d1..6cc40ed 100644
 +--- a/drivers/net/wireless/realtek/rtw88/main.c
 ++++ b/drivers/net/wireless/realtek/rtw88/main.c
-+@@ -3,6 +3,8 @@
++@@ -3,6 +3,7 @@
 +  */
 + 
 + #include <linux/devcoredump.h>
 ++#include <linux/etherdevice.h>
-++#include <linux/of_net.h>
 + 
 + #include "main.h"
 + #include "regd.h"
-+@@ -1974,5 +1976,7 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
++@@ -1974,5 +1975,6 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
 + {
 + 	struct rtw_efuse *efuse = &rtwdev->efuse;
-++	u8 mac_addr[ETH_ALEN];
 ++	int mac_ret;
 + 	int ret;
 + 
 + 	mutex_lock(&rtwdev->mutex);
-+@@ -2024,8 +2028,29 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
++@@ -2024,8 +2026,17 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
 + 	efuse->ext_lna_5g = efuse->lna_type_5g & BIT(3) ? 1 : 0;
 + 
 + 	if (!is_valid_ether_addr(efuse->addr)) {
 +-		eth_random_addr(efuse->addr);
 +-		dev_warn(rtwdev->dev, "efuse MAC invalid, using random\n");
-++		if (rtwdev->dev->of_node)
-++			mac_ret = of_get_mac_address(rtwdev->dev->of_node,
-++						     mac_addr);
-++		else {
-++			mac_ret = -ENODEV;
-++			dev_warn(rtwdev->dev,
-++				 "OF node unavailable for MAC address fallback\n");
-++		}
-++
-++		if (mac_ret)
-++			dev_warn(rtwdev->dev,
-++				 "of_get_mac_address failed: %d\n", mac_ret);
+++		mac_ret = device_get_mac_address(rtwdev->dev, efuse->addr);
 ++
 ++		if (mac_ret) {
 ++			eth_random_addr(efuse->addr);
 ++			dev_warn(rtwdev->dev,
-++				 "efuse and OF MAC invalid, using random (error: %d)\n",
+++				 "efuse and firmware MAC invalid, using random (error: %d)\n",
 ++				 mac_ret);
 ++		} else {
-++			ether_addr_copy(efuse->addr, mac_addr);
 ++			dev_info(rtwdev->dev,
-++				 "using MAC address from device tree\n");
+++				 "using MAC address from firmware\n");
 ++		}
 + 	}
 + 

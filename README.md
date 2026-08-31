@@ -16,9 +16,10 @@ firmware/configuration is not available from upstream `linux-firmware`, so
 this repository does not add a private Bluetooth firmware patch to
 LibreELEC. Wi-Fi remains enabled and uses `rtw88/rtw8723d_fw.bin`.
 
-The front-panel power LED is GPIOX_6, active high. Mainline U-Boot explicitly
-turns it on during `board_init()`, matching Xiaomi BL33, and Linux keeps it on
-through the standard `gpio-leds` binding.
+The front-panel power LED is GPIOX_6, active high. U-Boot's control DTS drives
+it and the GPIOAO_4 HDMI/USB 5 V enable high through GPIO hogs, matching Xiaomi
+BL33 without board-specific register writes. Linux uses the semantic
+`gpio-leds` and fixed-regulator bindings instead.
 
 For a one-step integration, apply
 [Patches/LibreELEC-12.2-MiBox4-all-in-one.patch](Patches/LibreELEC-12.2-MiBox4-all-in-one.patch):

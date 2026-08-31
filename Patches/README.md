@@ -37,7 +37,8 @@ done < /path/to/MiBox4-LibreELEC/Patches/series/series
 固件及配置，本补丁集不会向 LibreELEC 私自加入或启用蓝牙固件。
 
 前面板启动指示灯对应 GPIOX_6（高电平点亮）。Linux 通过 `gpio-leds`
-保持点亮，U-Boot 板级初始化则显式点亮该灯，以同步原厂 BL33 行为。
+保持点亮；U-Boot 专用 DTS 使用 GPIO hog 将 GPIOX_6 和 GPIOAO_4 直接
+设为输出高电平，不依赖 early-init 或板级寄存器写入。
 
 `u-boot/fip/mibox4/` 保存原厂包装阶段和校验值。构建时重新封装 Mainline
 BL33，生成的完整 FIP 由 LibreELEC 标准 `mkimage_uboot` 写入镜像启动扇区。

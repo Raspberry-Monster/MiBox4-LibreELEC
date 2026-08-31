@@ -30722,7 +30722,7 @@ new file mode 100644
 index 0000000..1111111
 --- /dev/null
 +++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
-@@ -0,0 +1,355 @@
+@@ -0,0 +1,357 @@
 +diff --git a/Documentation/devicetree/bindings/arm/amlogic.yaml b/Documentation/devicetree/bindings/arm/amlogic.yaml
 +--- a/Documentation/devicetree/bindings/arm/amlogic.yaml
 ++++ b/Documentation/devicetree/bindings/arm/amlogic.yaml
@@ -30751,7 +30751,7 @@ index 0000000..1111111
 +index 0000000000000000000000000000000000000000..364b386967cd29ca261e88a2c20efe1ecf3b8a8e
 +--- /dev/null
 ++++ b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
-+@@ -0,0 +1,326 @@
++@@ -0,0 +1,328 @@
 ++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 ++/*
 ++ * Xiaomi Mi Box 4 (MDZ-21-AA)
@@ -31053,6 +31053,8 @@ index 0000000..1111111
 ++
 ++	bluetooth {
 ++		compatible = "realtek,rtl8723ds-bt";
+++		nvmem-cells = <&bt_mac>;
+++		nvmem-cell-names = "mac-address";
 ++		enable-gpios = <&gpio GPIOX_18 GPIO_ACTIVE_HIGH>;
 ++		device-wake-gpios = <&gpio GPIOX_8 GPIO_ACTIVE_HIGH>;
 ++		host-wake-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
@@ -31096,7 +31098,7 @@ new file mode 100644
 index 0000000..1111111
 --- /dev/null
 +++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0099-LOCAL-wifi-rtw88-use-mibox4-soc-efuse-wifi-mac.patch
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,55 @@
 +From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 +From: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 +Date: Fri, 28 Aug 2026 14:00:00 +0800
@@ -31109,57 +31111,43 @@ index 0000000..1111111
 +
 +Signed-off-by: YuChia Kan <raspberrykan@stu.hqu.edu.cn>
 +---
-+ drivers/net/wireless/realtek/rtw88/main.c | 27 ++++++++++++++++++++++++
-+ 1 file changed, 27 insertions(+), 2 deletions(-)
++ drivers/net/wireless/realtek/rtw88/main.c | 15 +++++++++++++--
++ 1 file changed, 13 insertions(+), 2 deletions(-)
 +diff --git a/drivers/net/wireless/realtek/rtw88/main.c b/drivers/net/wireless/realtek/rtw88/main.c
 +index c4de5d1..6cc40ed 100644
 +--- a/drivers/net/wireless/realtek/rtw88/main.c
 ++++ b/drivers/net/wireless/realtek/rtw88/main.c
-+@@ -3,6 +3,8 @@
++@@ -3,6 +3,7 @@
 +  */
 + 
 + #include <linux/devcoredump.h>
 ++#include <linux/etherdevice.h>
-++#include <linux/of_net.h>
 + 
 + #include "main.h"
 + #include "regd.h"
-+@@ -1974,5 +1976,7 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
++@@ -1974,5 +1975,6 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
 + {
 + 	struct rtw_efuse *efuse = &rtwdev->efuse;
-++	u8 mac_addr[ETH_ALEN];
 ++	int mac_ret;
 + 	int ret;
 + 
 + 	mutex_lock(&rtwdev->mutex);
-+@@ -2024,8 +2028,29 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
++@@ -2024,8 +2026,17 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
 + 	efuse->ext_lna_5g = efuse->lna_type_5g & BIT(3) ? 1 : 0;
 + 
 + 	if (!is_valid_ether_addr(efuse->addr)) {
 +-		eth_random_addr(efuse->addr);
 +-		dev_warn(rtwdev->dev, "efuse MAC invalid, using random\n");
-++		if (rtwdev->dev->of_node)
-++			mac_ret = of_get_mac_address(rtwdev->dev->of_node,
-++						     mac_addr);
-++		else {
-++			mac_ret = -ENODEV;
-++			dev_warn(rtwdev->dev,
-++				 "OF node unavailable for MAC address fallback\n");
-++		}
-++
-++		if (mac_ret)
-++			dev_warn(rtwdev->dev,
-++				 "of_get_mac_address failed: %d\n", mac_ret);
+++		mac_ret = device_get_mac_address(rtwdev->dev, efuse->addr);
 ++
 ++		if (mac_ret) {
 ++			eth_random_addr(efuse->addr);
 ++			dev_warn(rtwdev->dev,
-++				 "efuse and OF MAC invalid, using random (error: %d)\n",
+++				 "efuse and firmware MAC invalid, using random (error: %d)\n",
 ++				 mac_ret);
 ++		} else {
-++			ether_addr_copy(efuse->addr, mac_addr);
 ++			dev_info(rtwdev->dev,
-++				 "using MAC address from device tree\n");
+++				 "using MAC address from firmware\n");
 ++		}
 + 	}
 + 
@@ -31171,27 +31159,51 @@ new file mode 100644
 index 0000000..1111111
 --- /dev/null
 +++ b/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
-@@ -0,0 +1,491 @@
+@@ -0,0 +1,459 @@
 +diff --git a/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
 +new file mode 100644
-+index 0000000000000000000000000000000000000000..3299fa64e02274f437215ebe26339578fb826524
++index 0000000000000000000000000000000000000000..fe38bcff53170e791d3d834f87e48de174162c0b
 +--- /dev/null
 ++++ b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
-+@@ -0,0 +1,28 @@
++@@ -0,0 +1,52 @@
 ++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 ++
 ++#include "meson-gxl-u-boot.dtsi"
 ++
+++/* Xiaomi BL33 drives both lines high during normal startup. */
+++&gpio {
+++	power-led-hog {
+++		gpio-hog;
+++		gpios = <GPIOX_6 GPIO_ACTIVE_HIGH>;
+++		output-high;
+++		line-name = "mibox4-power-led";
+++	};
+++};
+++
+++&gpio_ao {
+++	hdmi-usb-5v-hog {
+++		gpio-hog;
+++		gpios = <GPIOAO_4 GPIO_ACTIVE_HIGH>;
+++		output-high;
+++		line-name = "mibox4-hdmi-usb-5v";
+++	};
+++};
+++
+++/* The hog owns these GPIOs in U-Boot; Linux uses the semantic devices. */
 ++&hdmi_usb_5v {
-++	bootph-all;
+++	status = "disabled";
 ++};
 ++
 ++&leds {
-++	bootph-all;
+++	status = "disabled";
 ++};
 ++
-++&power_led {
-++	bootph-all;
+++&hdmi_tx {
+++	/delete-property/ hdmi-supply;
+++};
+++
+++&usb2_phy0 {
+++	/delete-property/ phy-supply;
 ++};
 ++
 ++/* U-Boot does not need to enumerate the soldered SDIO Wi-Fi function. */
@@ -31211,70 +31223,14 @@ index 0000000..1111111
 +index 0000000000000000000000000000000000000000..4027409c2f34e24f1261f08bd68d263dd84f12cf
 +--- /dev/null
 ++++ b/board/amlogic/mibox4/Makefile
-+@@ -0,0 +1,3 @@
++@@ -0,0 +1 @@
 ++# SPDX-License-Identifier: GPL-2.0+
-++
-++obj-y := mibox4.o
-+diff --git a/board/amlogic/mibox4/mibox4.c b/board/amlogic/mibox4/mibox4.c
-+new file mode 100644
-+index 0000000000000000000000000000000000000000..79421e5f1cfc1d6f46db30e1b0d84428f6cc6947
-+--- /dev/null
-++++ b/board/amlogic/mibox4/mibox4.c
-+@@ -0,0 +1,48 @@
-++// SPDX-License-Identifier: GPL-2.0+
-++/*
-++ * Xiaomi Mi Box 4 (MDZ-21-AA) board support
-++ *
-++ * A cold boot leaves GPIOAO_4 as an input and the shared HDMI/USB supply
-++ * disabled.  Xiaomi's BL33 executes "gpio set gpioao_4 1".  Reproduce the
-++ * resulting register state verified on hardware:
-++ *
-++ *   0xc8100024: 0xbfff3fff -> 0xbfff3fef
-++ */
-++
-++#include <asm/io.h>
-++#include <init.h>
-++#include <led.h>
-++#include <linux/bitops.h>
-++
-++#define MIBOX4_GPIOAO_4_EN_N	BIT(4)
-++#define MIBOX4_GPIOAO_4_OUT	BIT(20)
-++#define MIBOX4_AO_GPIO_O_EN_N	((void __iomem *)0xc8100024)
-++
-++static void mibox4_enable_hdmi_usb_power(void)
-++{
-++	clrsetbits_le32(MIBOX4_AO_GPIO_O_EN_N,
-++			MIBOX4_GPIOAO_4_EN_N | MIBOX4_GPIOAO_4_OUT,
-++			MIBOX4_GPIOAO_4_OUT);
-++}
-++
-++static void mibox4_enable_power_led(void)
-++{
-++	struct udevice *dev;
-++
-++	/* Xiaomi's BL33 drives GPIOX_6 high during normal startup. */
-++	if (!led_get_by_label("mibox4:power", &dev))
-++		led_set_state(dev, LEDST_ON);
-++}
-++
-++int board_early_init_f(void)
-++{
-++	mibox4_enable_hdmi_usb_power();
-++	return 0;
-++}
-++
-++int board_init(void)
-++{
-++	mibox4_enable_hdmi_usb_power();
-++	mibox4_enable_power_led();
-++	return 0;
-++}
 +diff --git a/configs/mibox4_defconfig b/configs/mibox4_defconfig
 +new file mode 100644
-+index 0000000000000000000000000000000000000000..ed78a878f9afa345489668b04cd60d54b5ac9a2e
++index 0000000000000000000000000000000000000000..00708aec072da00310c33f8213c192f2109c6cf8
 +--- /dev/null
 ++++ b/configs/mibox4_defconfig
-+@@ -0,0 +1,56 @@
++@@ -0,0 +1,54 @@
 ++CONFIG_ARM=y
 ++CONFIG_SYS_BOARD="mibox4"
 ++CONFIG_ARCH_MESON=y
@@ -31285,10 +31241,8 @@ index 0000000..1111111
 ++CONFIG_ENV_SIZE=0x2000
 ++CONFIG_ENV_IS_NOWHERE=y
 ++CONFIG_BOOTCOMMAND="setenv boot_targets usb0 mmc0; run distro_bootcmd"
-++CONFIG_BOARD_EARLY_INIT_F=y
 ++CONFIG_DM_GPIO=y
-++CONFIG_LED=y
-++CONFIG_LED_GPIO=y
+++CONFIG_GPIO_HOG=y
 ++CONFIG_DEFAULT_DEVICE_TREE="amlogic/meson-gxlx-mibox4"
 ++CONFIG_OF_LIBFDT_OVERLAY=y
 ++CONFIG_DM_RESET=y
@@ -31336,7 +31290,7 @@ index 0000000..1111111
 +index 0000000000000000000000000000000000000000..364b386967cd29ca261e88a2c20efe1ecf3b8a8e
 +--- /dev/null
 ++++ b/dts/upstream/src/arm64/amlogic/meson-gxlx-mibox4.dts
-+@@ -0,0 +1,326 @@
++@@ -0,0 +1,328 @@
 ++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 ++/*
 ++ * Xiaomi Mi Box 4 (MDZ-21-AA)
@@ -31638,6 +31592,8 @@ index 0000000..1111111
 ++
 ++	bluetooth {
 ++		compatible = "realtek,rtl8723ds-bt";
+++		nvmem-cells = <&bt_mac>;
+++		nvmem-cell-names = "mac-address";
 ++		enable-gpios = <&gpio GPIOX_18 GPIO_ACTIVE_HIGH>;
 ++		device-wake-gpios = <&gpio GPIOX_8 GPIO_ACTIVE_HIGH>;
 ++		host-wake-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
