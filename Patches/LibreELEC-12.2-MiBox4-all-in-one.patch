@@ -30722,18 +30722,18 @@ new file mode 100644
 index 0000000..1111111
 --- /dev/null
 +++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
-@@ -0,0 +1,357 @@
+@@ -0,0 +1,406 @@
 +diff --git a/Documentation/devicetree/bindings/arm/amlogic.yaml b/Documentation/devicetree/bindings/arm/amlogic.yaml
 +--- a/Documentation/devicetree/bindings/arm/amlogic.yaml
 ++++ b/Documentation/devicetree/bindings/arm/amlogic.yaml
-+@@ -139,6 +139,7 @@ properties:
-+  - description: Boards with the Amlogic Meson GXLX S905L SoC
-+    items:
-+       - enum:
-+           - amlogic,p271
-++          - xiaomi,mibox4
-+       - const: amlogic,s905l
-+       - const: amlogic,meson-gxlx
++@@ -110,6 +110,7 @@ properties:
++       - description: Boards with the Amlogic Meson GXLX S905L SoC
++         items:
++           - enum:
++               - amlogic,p271
+++              - xiaomi,mibox4
++           - const: amlogic,s905l
++           - const: amlogic,meson-gxlx
 +diff --git a/arch/arm64/boot/dts/amlogic/Makefile b/arch/arm64/boot/dts/amlogic/Makefile
 +index 249594fc91d5..029c921ecf1a 100644
 +--- a/arch/arm64/boot/dts/amlogic/Makefile
@@ -30751,7 +30751,7 @@ index 0000000..1111111
 +index 0000000000000000000000000000000000000000..364b386967cd29ca261e88a2c20efe1ecf3b8a8e
 +--- /dev/null
 ++++ b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
-+@@ -0,0 +1,328 @@
++@@ -0,0 +1,377 @@
 ++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 ++/*
 ++ * Xiaomi Mi Box 4 (MDZ-21-AA)
@@ -30780,6 +30780,16 @@ index 0000000..1111111
 ++		stdout-path = "serial0:115200n8";
 ++	};
 ++
+++	/*
+++	 * The vendor sound card's GPIO specifier uses the legacy linear ID
+++	 * 0x15. On GXL that is GPIOH_5, the active-high analog unmute line.
+++	 */
+++	av_mute: analog-audio-mute {
+++		compatible = "simple-audio-amplifier";
+++		sound-name-prefix = "AV";
+++		enable-gpios = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
+++	};
+++
 ++	/* gxl_tf_2g in Xiaomi's vendor DTB: 2 GiB RAM. */
 ++	memory@0 {
 ++		device_type = "memory";
@@ -30793,6 +30803,16 @@ index 0000000..1111111
 ++		port {
 ++			hdmi_connector_in: endpoint {
 ++				remote-endpoint = <&hdmi_tx_tmds_out>;
+++			};
+++		};
+++	};
+++
+++	cvbs_connector: cvbs-connector {
+++		compatible = "composite-video-connector";
+++
+++		port {
+++			cvbs_connector_in: endpoint {
+++				remote-endpoint = <&cvbs_vdac_out>;
 ++			};
 ++		};
 ++	};
@@ -30868,10 +30888,15 @@ index 0000000..1111111
 ++		};
 ++	};
 ++
-++	/* HDMI is the only audio output currently supported. */
 ++	sound {
 ++		compatible = "amlogic,gx-sound-card";
-++		model = "Xiaomi-Mi-Box-4-HDMI";
+++		model = "Xiaomi-Mi-Box-4";
+++		audio-aux-devs = <&av_mute>;
+++		audio-widgets = "Line", "Lineout";
+++		audio-routing = "AV INL", "ACODEC LOLN",
+++				"AV INR", "ACODEC LORN",
+++				"Lineout", "AV OUTL",
+++				"Lineout", "AV OUTR";
 ++
 ++		clocks = <&clkc CLKID_MPLL0>,
 ++			 <&clkc CLKID_MPLL1>,
@@ -30893,6 +30918,10 @@ index 0000000..1111111
 ++			codec-0 {
 ++				sound-dai = <&aiu AIU_HDMI CTRL_I2S>;
 ++			};
+++
+++			codec-1 {
+++				sound-dai = <&aiu AIU_ACODEC CTRL_I2S>;
+++			};
 ++		};
 ++
 ++		dai-link-2 {
@@ -30902,10 +30931,18 @@ index 0000000..1111111
 ++				sound-dai = <&hdmi_tx>;
 ++			};
 ++		};
+++
+++		dai-link-3 {
+++			sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
+++
+++			codec-0 {
+++				sound-dai = <&acodec>;
+++			};
+++		};
 ++	};
 ++};
 ++
-++/* Mali 450-MP2 interrupt layout from the S905L/GXLX P271 description. */
+++/* Xiaomi MDZ-21-AA uses the Mali 450-MP3 interrupt layout. */
 ++&apb {
 ++	mali: gpu@c0000 {
 ++		interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
@@ -30915,14 +30952,18 @@ index 0000000..1111111
 ++			<GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
 ++			<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
 ++			<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
-++			<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+++			<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>,
+++			<GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>,
+++			<GIC_SPI 169 IRQ_TYPE_LEVEL_HIGH>;
 ++		interrupt-names = "gp", "gpmmu", "pp", "pmu",
-++			"pp0", "ppmmu0", "pp1", "ppmmu1";
+++			"pp0", "ppmmu0", "pp1", "ppmmu1",
+++			"pp2", "ppmmu2";
 ++	};
 ++};
 ++
 ++&acodec {
-++	status = "disabled";
+++	AVDD-supply = <&vddio_ao18>;
+++	status = "okay";
 ++};
 ++
 ++&aiu {
@@ -30935,6 +30976,14 @@ index 0000000..1111111
 ++	pinctrl-names = "default";
 ++	hdmi-phandle = <&hdmi_tx>;
 ++};
+++
+++&cvbs_vdac_port {
+++	cvbs_vdac_out: endpoint {
+++		remote-endpoint = <&cvbs_connector_in>;
+++	};
+++};
+++
+++/delete-node/ &eth_mac;
 ++
 ++&efuse {
 ++	eth_mac: mac-address@0 {
@@ -31030,7 +31079,7 @@ index 0000000..1111111
 ++	pinctrl-names = "default", "clk-gate";
 ++	bus-width = <8>;
 ++	cap-mmc-highspeed;
-++	max-frequency = <200000000>;
+++	max-frequency = <100000000>;
 ++	non-removable;
 ++	disable-wp;
 ++	mmc-ddr-1_8v;
@@ -31159,16 +31208,24 @@ new file mode 100644
 index 0000000..1111111
 --- /dev/null
 +++ b/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
-@@ -0,0 +1,459 @@
+@@ -0,0 +1,516 @@
 +diff --git a/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
 +new file mode 100644
 +index 0000000000000000000000000000000000000000..fe38bcff53170e791d3d834f87e48de174162c0b
 +--- /dev/null
 ++++ b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
-+@@ -0,0 +1,52 @@
++@@ -0,0 +1,60 @@
 ++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 ++
 ++#include "meson-gxl-u-boot.dtsi"
+++
+++/ {
+++	aliases {
+++		mmc0 = &sd_emmc_c;
+++		/delete-property/ mmc1;
+++		/delete-property/ mmc2;
+++	};
+++};
 ++
 ++/* Xiaomi BL33 drives both lines high during normal startup. */
 ++&gpio {
@@ -31290,7 +31347,7 @@ index 0000000..1111111
 +index 0000000000000000000000000000000000000000..364b386967cd29ca261e88a2c20efe1ecf3b8a8e
 +--- /dev/null
 ++++ b/dts/upstream/src/arm64/amlogic/meson-gxlx-mibox4.dts
-+@@ -0,0 +1,328 @@
++@@ -0,0 +1,377 @@
 ++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 ++/*
 ++ * Xiaomi Mi Box 4 (MDZ-21-AA)
@@ -31319,6 +31376,16 @@ index 0000000..1111111
 ++		stdout-path = "serial0:115200n8";
 ++	};
 ++
+++	/*
+++	 * The vendor sound card's GPIO specifier uses the legacy linear ID
+++	 * 0x15. On GXL that is GPIOH_5, the active-high analog unmute line.
+++	 */
+++	av_mute: analog-audio-mute {
+++		compatible = "simple-audio-amplifier";
+++		sound-name-prefix = "AV";
+++		enable-gpios = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
+++	};
+++
 ++	/* gxl_tf_2g in Xiaomi's vendor DTB: 2 GiB RAM. */
 ++	memory@0 {
 ++		device_type = "memory";
@@ -31332,6 +31399,16 @@ index 0000000..1111111
 ++		port {
 ++			hdmi_connector_in: endpoint {
 ++				remote-endpoint = <&hdmi_tx_tmds_out>;
+++			};
+++		};
+++	};
+++
+++	cvbs_connector: cvbs-connector {
+++		compatible = "composite-video-connector";
+++
+++		port {
+++			cvbs_connector_in: endpoint {
+++				remote-endpoint = <&cvbs_vdac_out>;
 ++			};
 ++		};
 ++	};
@@ -31407,10 +31484,15 @@ index 0000000..1111111
 ++		};
 ++	};
 ++
-++	/* HDMI is the only audio output currently supported. */
 ++	sound {
 ++		compatible = "amlogic,gx-sound-card";
-++		model = "Xiaomi-Mi-Box-4-HDMI";
+++		model = "Xiaomi-Mi-Box-4";
+++		audio-aux-devs = <&av_mute>;
+++		audio-widgets = "Line", "Lineout";
+++		audio-routing = "AV INL", "ACODEC LOLN",
+++				"AV INR", "ACODEC LORN",
+++				"Lineout", "AV OUTL",
+++				"Lineout", "AV OUTR";
 ++
 ++		clocks = <&clkc CLKID_MPLL0>,
 ++			 <&clkc CLKID_MPLL1>,
@@ -31432,6 +31514,10 @@ index 0000000..1111111
 ++			codec-0 {
 ++				sound-dai = <&aiu AIU_HDMI CTRL_I2S>;
 ++			};
+++
+++			codec-1 {
+++				sound-dai = <&aiu AIU_ACODEC CTRL_I2S>;
+++			};
 ++		};
 ++
 ++		dai-link-2 {
@@ -31441,10 +31527,18 @@ index 0000000..1111111
 ++				sound-dai = <&hdmi_tx>;
 ++			};
 ++		};
+++
+++		dai-link-3 {
+++			sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
+++
+++			codec-0 {
+++				sound-dai = <&acodec>;
+++			};
+++		};
 ++	};
 ++};
 ++
-++/* Mali 450-MP2 interrupt layout from the S905L/GXLX P271 description. */
+++/* Xiaomi MDZ-21-AA uses the Mali 450-MP3 interrupt layout. */
 ++&apb {
 ++	mali: gpu@c0000 {
 ++		interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
@@ -31454,14 +31548,18 @@ index 0000000..1111111
 ++			<GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
 ++			<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
 ++			<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
-++			<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+++			<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>,
+++			<GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>,
+++			<GIC_SPI 169 IRQ_TYPE_LEVEL_HIGH>;
 ++		interrupt-names = "gp", "gpmmu", "pp", "pmu",
-++			"pp0", "ppmmu0", "pp1", "ppmmu1";
+++			"pp0", "ppmmu0", "pp1", "ppmmu1",
+++			"pp2", "ppmmu2";
 ++	};
 ++};
 ++
 ++&acodec {
-++	status = "disabled";
+++	AVDD-supply = <&vddio_ao18>;
+++	status = "okay";
 ++};
 ++
 ++&aiu {
@@ -31474,6 +31572,14 @@ index 0000000..1111111
 ++	pinctrl-names = "default";
 ++	hdmi-phandle = <&hdmi_tx>;
 ++};
+++
+++&cvbs_vdac_port {
+++	cvbs_vdac_out: endpoint {
+++		remote-endpoint = <&cvbs_connector_in>;
+++	};
+++};
+++
+++/delete-node/ &eth_mac;
 ++
 ++&efuse {
 ++	eth_mac: mac-address@0 {
@@ -31569,7 +31675,7 @@ index 0000000..1111111
 ++	pinctrl-names = "default", "clk-gate";
 ++	bus-width = <8>;
 ++	cap-mmc-highspeed;
-++	max-frequency = <200000000>;
+++	max-frequency = <100000000>;
 ++	non-removable;
 ++	disable-wp;
 ++	mmc-ddr-1_8v;

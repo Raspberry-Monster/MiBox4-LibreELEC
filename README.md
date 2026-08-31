@@ -6,9 +6,12 @@ and a production Mainline U-Boot FIP integration.
 
 The board DTS is independent from the P23x/Q20x/P271 reference-board DTSI.
 It reports the hardware as `Xiaomi Mi Box 4 (MDZ-21-AA)`, describes all four
-vendor eFuse fields (Ethernet, Bluetooth, WLAN, and USID), and currently
-exposes HDMI as the only audio output. Analog/CVBS audio and video are not
-enabled.
+vendor eFuse fields (Ethernet, Bluetooth, WLAN, and USID), and exposes HDMI
+plus the analog audio/CVBS AV output. The on-SoC analog codec feeds the AV
+line output through the GPIOH_5 active-high unmute gate.
+
+The vendor-DTB/BL33 GPIO trace and safe on-device register observation points
+are documented in `bootloader/mibox4-stock/README.md`.
 
 RTL8723DS Bluetooth wiring is documented in the DTS, but its UART and child
 node intentionally remain disabled. The required board-matching Bluetooth

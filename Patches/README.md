@@ -24,15 +24,15 @@ done < /path/to/MiBox4-LibreELEC/Patches/series/series
 
 补丁职责如下：
 
-1. `0001`：添加独立的 Linux 板级 Device Tree、RTL8723DS WLAN 固件及内核配置；不再继承 P23x/Q20x/P271 板级 DTSI。
+1. `0001`：添加独立的 Linux 板级 Device Tree、模拟音频/CVBS AV 输出、RTL8723DS WLAN 固件及内核配置；不再继承 P23x/Q20x/P271 板级 DTSI。
 2. `0002`：Realtek eFuse 地址无效时，从 Meson SoC eFuse 读取稳定的 WLAN MAC。
 3. `0003`：添加 U-Boot v2025.07 板级代码、DTS 和 `mibox4_defconfig`。
 4. `0004`：扩展 `amlogic-boot-fip`，使用原厂签名 BL2/BL30/BL31 和 Mainline BL33 构建完整 `u-boot.bin.sd.bin`。
 5. `0005`：注册 `mibox4` 构建目标，并接入 LibreELEC 原生 `mkimage_uboot` 镜像路径。
 6. `0006`：将 `xiaomi,mibox4` 加入 EMMCTool 支持的板型检查。
 
-当前音频仅启用 HDMI；模拟/CVBS 音视频暂不启用。DTS 已补充 RTL8723DS
-蓝牙 UART、复位/唤醒 GPIO 和完整的 Ethernet/BT/WLAN/USID eFuse 布局，
+当前同时启用 HDMI 和模拟音频/CVBS AV 输出；模拟 codec 通过 GPIOH_5
+高电平解除静音。DTS 已补充 RTL8723DS 蓝牙 UART、复位/唤醒 GPIO 和完整的 Ethernet/BT/WLAN/USID eFuse 布局，
 但蓝牙节点保持禁用。由于上游 `linux-firmware` 尚无与本机匹配的蓝牙
 固件及配置，本补丁集不会向 LibreELEC 私自加入或启用蓝牙固件。
 

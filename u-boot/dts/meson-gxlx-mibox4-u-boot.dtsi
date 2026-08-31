@@ -2,6 +2,14 @@
 
 #include "meson-gxl-u-boot.dtsi"
 
+/ {
+	aliases {
+		mmc0 = &sd_emmc_c;
+		/delete-property/ mmc1;
+		/delete-property/ mmc2;
+	};
+};
+
 /* Xiaomi BL33 drives both lines high during normal startup. */
 &gpio {
 	power-led-hog {
