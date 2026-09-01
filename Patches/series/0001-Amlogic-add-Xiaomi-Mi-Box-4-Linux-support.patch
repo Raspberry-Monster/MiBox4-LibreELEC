@@ -5,9 +5,9 @@ Subject: [PATCH 1/6] Amlogic: add Xiaomi Mi Box 4 Linux support
 
 ---
  projects/Amlogic/config/kernel-firmware.dat   |   1 +
- ...rm64-dts-add-xiaomi-mibox4-rtl8723ds.patch | 406 +
+ ...rm64-dts-add-xiaomi-mibox4-rtl8723ds.patch | 411 +
  projects/Amlogic/linux/linux.aarch64.conf     |   2 +-
- 3 files changed, 408 insertions(+), 1 deletion(-)
+ 3 files changed, 413 insertions(+), 1 deletion(-)
  create mode 100644 projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
 
 diff --git a/projects/Amlogic/config/kernel-firmware.dat b/projects/Amlogic/config/kernel-firmware.dat
@@ -27,7 +27,7 @@ new file mode 100644
 index 0000000..1111111
 --- /dev/null
 +++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
-@@ -0,0 +1,406 @@
+@@ -0,0 +1,411 @@
 +diff --git a/Documentation/devicetree/bindings/arm/amlogic.yaml b/Documentation/devicetree/bindings/arm/amlogic.yaml
 +--- a/Documentation/devicetree/bindings/arm/amlogic.yaml
 ++++ b/Documentation/devicetree/bindings/arm/amlogic.yaml
@@ -53,10 +53,10 @@ index 0000000..1111111
 + dtb-$(CONFIG_ARCH_MESON) += meson-gxm-mecool-kiii-pro.dtb
 +diff --git a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
 +new file mode 100644
-+index 0000000000000000000000000000000000000000..364b386967cd29ca261e88a2c20efe1ecf3b8a8e
++index 0000000000000000000000000000000000000000..c5297182bcbb762d6b6dd3c35211fb0a581de361
 +--- /dev/null
 ++++ b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
-+@@ -0,0 +1,377 @@
++@@ -0,0 +1,382 @@
 ++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 ++/*
 ++ * Xiaomi Mi Box 4 (MDZ-21-AA)
@@ -79,6 +79,9 @@ index 0000000..1111111
 ++
 ++	aliases {
 ++		serial0 = &uart_AO;
+++		mmc0 = &sd_emmc_c;
+++		mmc1 = &sd_emmc_a;
+++		/delete-property/ mmc2;
 ++	};
 ++
 ++	chosen {
@@ -289,6 +292,8 @@ index 0000000..1111111
 ++};
 ++
 ++/delete-node/ &eth_mac;
+++/delete-node/ &sn;
+++/delete-node/ &bid;
 ++
 ++&efuse {
 ++	eth_mac: mac-address@0 {

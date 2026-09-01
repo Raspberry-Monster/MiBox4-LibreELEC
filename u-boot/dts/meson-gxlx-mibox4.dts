@@ -20,6 +20,9 @@
 
 	aliases {
 		serial0 = &uart_AO;
+		mmc0 = &sd_emmc_c;
+		mmc1 = &sd_emmc_a;
+		/delete-property/ mmc2;
 	};
 
 	chosen {
@@ -230,6 +233,8 @@
 };
 
 /delete-node/ &eth_mac;
+/delete-node/ &sn;
+/delete-node/ &bid;
 
 &efuse {
 	eth_mac: mac-address@0 {

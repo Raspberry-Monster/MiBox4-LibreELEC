@@ -30722,7 +30722,7 @@ new file mode 100644
 index 0000000..1111111
 --- /dev/null
 +++ b/projects/Amlogic/devices/AMLGX/patches/linux/amlogic-0098-LOCAL-arm64-dts-add-xiaomi-mibox4-rtl8723ds.patch
-@@ -0,0 +1,406 @@
+@@ -0,0 +1,411 @@
 +diff --git a/Documentation/devicetree/bindings/arm/amlogic.yaml b/Documentation/devicetree/bindings/arm/amlogic.yaml
 +--- a/Documentation/devicetree/bindings/arm/amlogic.yaml
 ++++ b/Documentation/devicetree/bindings/arm/amlogic.yaml
@@ -30748,10 +30748,10 @@ index 0000000..1111111
 + dtb-$(CONFIG_ARCH_MESON) += meson-gxm-mecool-kiii-pro.dtb
 +diff --git a/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
 +new file mode 100644
-+index 0000000000000000000000000000000000000000..364b386967cd29ca261e88a2c20efe1ecf3b8a8e
++index 0000000000000000000000000000000000000000..c5297182bcbb762d6b6dd3c35211fb0a581de361
 +--- /dev/null
 ++++ b/arch/arm64/boot/dts/amlogic/meson-gxlx-mibox4.dts
-+@@ -0,0 +1,377 @@
++@@ -0,0 +1,382 @@
 ++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 ++/*
 ++ * Xiaomi Mi Box 4 (MDZ-21-AA)
@@ -30774,6 +30774,9 @@ index 0000000..1111111
 ++
 ++	aliases {
 ++		serial0 = &uart_AO;
+++		mmc0 = &sd_emmc_c;
+++		mmc1 = &sd_emmc_a;
+++		/delete-property/ mmc2;
 ++	};
 ++
 ++	chosen {
@@ -30984,6 +30987,8 @@ index 0000000..1111111
 ++};
 ++
 ++/delete-node/ &eth_mac;
+++/delete-node/ &sn;
+++/delete-node/ &bid;
 ++
 ++&efuse {
 ++	eth_mac: mac-address@0 {
@@ -31247,7 +31252,7 @@ new file mode 100644
 index 0000000..1111111
 --- /dev/null
 +++ b/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
-@@ -0,0 +1,516 @@
+@@ -0,0 +1,521 @@
 +diff --git a/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
 +new file mode 100644
 +index 0000000000000000000000000000000000000000..fe38bcff53170e791d3d834f87e48de174162c0b
@@ -31383,10 +31388,10 @@ index 0000000..1111111
 ++CONFIG_USB_DWC3_MESON_GXL=y
 +diff --git a/dts/upstream/src/arm64/amlogic/meson-gxlx-mibox4.dts b/dts/upstream/src/arm64/amlogic/meson-gxlx-mibox4.dts
 +new file mode 100644
-+index 0000000000000000000000000000000000000000..364b386967cd29ca261e88a2c20efe1ecf3b8a8e
++index 0000000000000000000000000000000000000000..c5297182bcbb762d6b6dd3c35211fb0a581de361
 +--- /dev/null
 ++++ b/dts/upstream/src/arm64/amlogic/meson-gxlx-mibox4.dts
-+@@ -0,0 +1,377 @@
++@@ -0,0 +1,382 @@
 ++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 ++/*
 ++ * Xiaomi Mi Box 4 (MDZ-21-AA)
@@ -31409,6 +31414,9 @@ index 0000000..1111111
 ++
 ++	aliases {
 ++		serial0 = &uart_AO;
+++		mmc0 = &sd_emmc_c;
+++		mmc1 = &sd_emmc_a;
+++		/delete-property/ mmc2;
 ++	};
 ++
 ++	chosen {
@@ -31619,6 +31627,8 @@ index 0000000..1111111
 ++};
 ++
 ++/delete-node/ &eth_mac;
+++/delete-node/ &sn;
+++/delete-node/ &bid;
 ++
 ++&efuse {
 ++	eth_mac: mac-address@0 {
