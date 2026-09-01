@@ -51,6 +51,11 @@
 	status = "disabled";
 };
 
+/* Bluetooth UART and control GPIOs are initialized by Linux. */
+&uart_A {
+	status = "disabled";
+};
+
 &sd_emmc_c {
 	bootph-all;
 };

@@ -4,21 +4,21 @@ Date: Mon, 31 Aug 2026 18:09:50 +0800
 Subject: [PATCH 3/6] u-boot: add Xiaomi Mi Box 4 board support
 
 ---
- .../u-boot-0003-LOCAL-add-xiaomi-mibox4.patch | 521 +
- 1 file changed, 521 insertions(+)
+ .../u-boot-0003-LOCAL-add-xiaomi-mibox4.patch | 526 +
+ 1 file changed, 526 insertions(+)
  create mode 100644 projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
 diff --git a/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch b/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
 new file mode 100644
 index 0000000..1111111
 --- /dev/null
 +++ b/projects/Amlogic/patches/u-boot/u-boot-0003-LOCAL-add-xiaomi-mibox4.patch
-@@ -0,0 +1,521 @@
+@@ -0,0 +1,526 @@
 +diff --git a/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
 +new file mode 100644
-+index 0000000000000000000000000000000000000000..fe38bcff53170e791d3d834f87e48de174162c0b
++index 0000000000000000000000000000000000000000..4e419f9a1d2f20664934f7ae42620489fe83af50
 +--- /dev/null
 ++++ b/arch/arm/dts/meson-gxlx-mibox4-u-boot.dtsi
-+@@ -0,0 +1,60 @@
++@@ -0,0 +1,65 @@
 ++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 ++
 ++#include "meson-gxl-u-boot.dtsi"
@@ -69,6 +69,11 @@ index 0000000..1111111
 ++
 ++/* U-Boot does not need to enumerate the soldered SDIO Wi-Fi function. */
 ++&sd_emmc_a {
+++	status = "disabled";
+++};
+++
+++/* Bluetooth UART and control GPIOs are initialized by Linux. */
+++&uart_A {
 ++	status = "disabled";
 ++};
 ++
@@ -148,7 +153,7 @@ index 0000000..1111111
 ++CONFIG_USB_DWC3_MESON_GXL=y
 +diff --git a/dts/upstream/src/arm64/amlogic/meson-gxlx-mibox4.dts b/dts/upstream/src/arm64/amlogic/meson-gxlx-mibox4.dts
 +new file mode 100644
-+index 0000000000000000000000000000000000000000..c5297182bcbb762d6b6dd3c35211fb0a581de361
++index 0000000000000000000000000000000000000000..5af310205e40d28f8bbe878bc29900a83fb822b6
 +--- /dev/null
 ++++ b/dts/upstream/src/arm64/amlogic/meson-gxlx-mibox4.dts
 +@@ -0,0 +1,382 @@
@@ -496,11 +501,11 @@ index 0000000..1111111
 ++};
 ++
 ++/*
-++ * RTL8723DS Bluetooth is wired to UART_A. Keep it disabled until matching
-++ * rtl_bt firmware and a board configuration are available upstream.
+++ * The vendor DT enables RTL8723DS Bluetooth on UART_A. Vendor BL33 sets
+++ * bluetooth_usb=false, confirming that the controller uses UART transport.
 ++ */
 ++&uart_A {
-++	status = "disabled";
+++	status = "okay";
 ++	pinctrl-0 = <&uart_a_pins>, <&uart_a_cts_rts_pins>;
 ++	pinctrl-names = "default";
 ++	uart-has-rtscts;
@@ -512,7 +517,7 @@ index 0000000..1111111
 ++		enable-gpios = <&gpio GPIOX_18 GPIO_ACTIVE_HIGH>;
 ++		device-wake-gpios = <&gpio GPIOX_8 GPIO_ACTIVE_HIGH>;
 ++		host-wake-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
-++		status = "disabled";
+++		status = "okay";
 ++	};
 ++};
 ++

@@ -20,6 +20,8 @@ Linux and U-Boot use the same standalone Mi Box 4 board description instead
 of inheriting the P23x/Q20x/P271 board DTSI. The U-Boot overlay disables the
 soldered SDIO Wi-Fi bus so eMMC remains the only MMC boot target and marks the
 eMMC and AO UART for U-Boot use.
+It also disables UART_A so the RTL8723DS Bluetooth transport and its control
+GPIOs remain exclusively under Linux ownership.
 Physical UART access requires soldering and is not required or assumed for
 validation. LibreELEC loads its separate copy of the board DTB for Linux,
 where Wi-Fi and other supported peripherals are enabled.

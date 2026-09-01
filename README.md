@@ -13,11 +13,11 @@ line output through the GPIOH_5 active-high unmute gate.
 The vendor-DTB/BL33 GPIO trace and safe on-device register observation points
 are documented in `bootloader/mibox4-stock/README.md`.
 
-RTL8723DS Bluetooth wiring is documented in the DTS, but its UART and child
-node intentionally remain disabled. The required board-matching Bluetooth
-firmware/configuration is not available from upstream `linux-firmware`, so
-this repository does not add a private Bluetooth firmware patch to
-LibreELEC. Wi-Fi remains enabled and uses `rtw88/rtw8723d_fw.bin`.
+RTL8723DS Bluetooth is enabled on UART_A with the reset and wake GPIOs from
+the vendor DT. Xiaomi BL33 reports `bluetooth_usb=false`, confirming the UART
+transport. The controller node references the vendor-defined Bluetooth eFuse
+cell. No private Bluetooth firmware is added by this repository. Wi-Fi remains
+enabled and uses `rtw88/rtw8723d_fw.bin`.
 
 The front-panel power LED is GPIOX_6, active high. U-Boot's control DTS drives
 it and the GPIOAO_4 HDMI/USB 5 V enable high through GPIO hogs, matching Xiaomi

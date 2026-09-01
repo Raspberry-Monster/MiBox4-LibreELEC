@@ -342,11 +342,11 @@
 };
 
 /*
- * RTL8723DS Bluetooth is wired to UART_A. Keep it disabled until matching
- * rtl_bt firmware and a board configuration are available upstream.
+ * The vendor DT enables RTL8723DS Bluetooth on UART_A. Vendor BL33 sets
+ * bluetooth_usb=false, confirming that the controller uses UART transport.
  */
 &uart_A {
-	status = "disabled";
+	status = "okay";
 	pinctrl-0 = <&uart_a_pins>, <&uart_a_cts_rts_pins>;
 	pinctrl-names = "default";
 	uart-has-rtscts;
@@ -358,7 +358,7 @@
 		enable-gpios = <&gpio GPIOX_18 GPIO_ACTIVE_HIGH>;
 		device-wake-gpios = <&gpio GPIOX_8 GPIO_ACTIVE_HIGH>;
 		host-wake-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
-		status = "disabled";
+		status = "okay";
 	};
 };
 
