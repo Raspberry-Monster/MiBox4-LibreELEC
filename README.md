@@ -1,22 +1,42 @@
 # MiBox4-LibreELEC
 
-This repository contains device tree and LibreELEC 12.2 patches for the
-Xiaomi Mi Box 4 (MDZ-21-AA). Apply
-[`LibreELEC-12.2-MiBox4-complete.patch`](LibreELEC-12.2-MiBox4-complete.patch)
-for a one-step integration, or use the ordered patches in [`Patches/`](Patches/)
-for development and review.
+This branch provides LibreELEC 12.2 support for Xiaomi Mi Box 4
+(MDZ-21-AA) while retaining Xiaomi's vendor U-Boot boot chain.
 
-The original DTB/DTS files were extracted from the stock firmware with the assistance of Codex.
+The Linux board device tree is synchronized from the latest `uboot` branch
+version. It describes the standalone Mi Box 4 hardware, RTL8723DS Wi-Fi,
+eFuse MAC cells, HDMI/USB power, analog audio, eMMC, and the absence of an
+SD-card slot.
 
-The adapted device tree adds internal eMMC, Bluetooth, and RTL8723DS Wi-Fi
-support. The kernel patch reads the stable WLAN MAC address from the Meson SoC
-eFuse through NVMEM when the RTL8723DS eFuse address is invalid. The custom
-EMMCTool installer preserves the signed vendor boot chain instead of writing a
-generic image over it.
+Apply either the one-step patch:
 
-See [EMMC_ANALYSIS.md](EMMC_ANALYSIS.md) for the dump layout, patch choices,
-build steps, MAC design, installation procedure, and recovery limits.
+```bash
+git apply --whitespace=nowarn LibreELEC-12.2-MiBox4-complete.patch
+```
 
-**Disclaimer:** This repository is provided without any warranty. Use it at your own risk.
+or the two ordered patches documented in [Patches/README.md](Patches/README.md).
+Do not mix the two methods.
+
+Build the standard AMLGX generic-box image:
+
+```bash
+PROJECT=Amlogic ARCH=aarch64 DEVICE=AMLGX \
+  UBOOT_SYSTEM=box make image
+```
+
+This branch does not build or install a dedicated Mainline U-Boot/FIP. Xiaomi's
+vendor U-Boot starts LibreELEC through the generic box
+`aml_autoscript`/`s905_autoscript` flow. Select
+`/amlogic/meson-gxlx-mibox4.dtb` in `uEnv.ini` before booting.
+
+EMMCTool is intentionally unmodified. LibreELEC's default generic-box/SBC
+safety behavior remains in effect, so this branch does not provide or endorse
+an automated eMMC installation path.
+
+See [How_To_Install_LibreELEC.md](How_To_Install_LibreELEC.md) for USB boot
+instructions.
+
+**Disclaimer:** This repository is provided without any warranty. Use it at
+your own risk.
 
 Licensed under the **GNU General Public License v2.0 (GPL-2.0)**.

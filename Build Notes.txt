@@ -1,15 +1,19 @@
 Target branch: libreelec-12.2
+
 One-step patch:
 git apply --whitespace=nowarn LibreELEC-12.2-MiBox4-complete.patch
 
 Or apply the equivalent step patches in order:
-git apply --whitespace=nowarn Patches/0001-mibox4-device-tree-rtl8723ds.patch
-git apply --whitespace=nowarn Patches/0002-mibox4-soc-efuse-wifi-mac.patch
-git apply Patches/0003-mibox4-emmctool-safe-install.patch
+git apply --whitespace=nowarn Patches/0001-Amlogic-add-Xiaomi-Mi-Box-4-Linux-support.patch
+git apply --whitespace=nowarn Patches/0002-wifi-derive-Mi-Box-4-MAC-from-Meson-eFuse.patch
 
 Do not apply both patch sets to the same source tree.
 
-Install Dependencies
+Install dependencies:
 PROJECT=Amlogic ARCH=aarch64 DEVICE=AMLGX UBOOT_SYSTEM=box tools/download-tool
-Make Image
+
+Build the generic box image:
 PROJECT=Amlogic ARCH=aarch64 DEVICE=AMLGX UBOOT_SYSTEM=box make image
+
+Boot path:
+Xiaomi vendor U-Boot -> aml_autoscript -> s905_autoscript -> LibreELEC

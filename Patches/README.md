@@ -1,19 +1,24 @@
-# 分步骤补丁
+# LibreELEC 12.2 分步补丁
 
-这些补丁面向 LibreELEC `libreelec-12.2` 源码仓库，必须按编号顺序应用：
+这些补丁面向 LibreELEC `libreelec-12.2`，必须按编号顺序应用：
 
-1. `0001-mibox4-device-tree-rtl8723ds.patch`：加入 Mi Box 4 Device Tree、
-   RTL8723DS 固件选择和内核配置；
-2. `0002-mibox4-soc-efuse-wifi-mac.patch`：通过 NVMEM 读取 SoC eFuse 中的
-   WLAN MAC，并在 Realtek eFuse MAC 无效时交给 rtw88 使用；
-3. `0003-mibox4-emmctool-safe-install.patch`：加入保留原厂签名启动链的
-   eMMC 安装流程及安装前备份。
+1. `0001-Amlogic-add-Xiaomi-Mi-Box-4-Linux-support.patch`
+   - 引入与 `uboot` 分支同步的最新 Mi Box 4 Linux DTS；
+   - 注册 DTB、RTL8723DS 固件和内核配置。
+2. `0002-wifi-derive-Mi-Box-4-MAC-from-Meson-eFuse.patch`
+   - 回移 NVMEM MAC 读取支持；
+   - 在 RTL8723DS 模块 eFuse MAC 无效时使用板载 SoC eFuse WLAN MAC。
 
 ```bash
-git apply --whitespace=nowarn /path/to/Patches/0001-mibox4-device-tree-rtl8723ds.patch
-git apply --whitespace=nowarn /path/to/Patches/0002-mibox4-soc-efuse-wifi-mac.patch
-git apply /path/to/Patches/0003-mibox4-emmctool-safe-install.patch
+git apply --whitespace=nowarn \
+  /path/to/Patches/0001-Amlogic-add-Xiaomi-Mi-Box-4-Linux-support.patch
+git apply --whitespace=nowarn \
+  /path/to/Patches/0002-wifi-derive-Mi-Box-4-MAC-from-Meson-eFuse.patch
 ```
 
-它们与仓库根目录的 `LibreELEC-12.2-MiBox4-complete.patch` 等价；请只选择
-其中一种方式，不要重复应用。
+它们与仓库根目录的 `LibreELEC-12.2-MiBox4-complete.patch` 等价；只能选择
+一种应用方式。
+
+本分支不修改 U-Boot/FIP，也不修改 EMMCTool。镜像目标固定为通用
+`UBOOT_SYSTEM=box`，由 Xiaomi vendor U-Boot 通过
+`aml_autoscript`/`s905_autoscript` 启动。
