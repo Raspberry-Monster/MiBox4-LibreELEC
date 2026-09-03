@@ -1,6 +1,0 @@
-0001-Amlogic-add-Xiaomi-Mi-Box-4-Linux-support.patch
-0002-wifi-derive-Mi-Box-4-MAC-from-Meson-eFuse.patch
-0003-u-boot-add-Xiaomi-Mi-Box-4-board-support.patch
-0004-amlogic-boot-fip-add-Xiaomi-Mi-Box-4-firmware.patch
-0005-Amlogic-wire-Mi-Box-4-into-the-image-build.patch
-0006-emmctool-allow-Xiaomi-Mi-Box-4-image-writes.patch

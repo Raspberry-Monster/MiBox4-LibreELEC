@@ -1,5 +1,25 @@
 # MiBox4-LibreELEC
 
+## Repository Notice
+
+For commit organization and easier maintenance, the patches have now been
+officially removed from this repository. This repository is currently used
+only for miscellaneous file submissions.
+
+The related work has moved to the following repositories:
+
+- [amlogic-boot-fip](https://github.com/Raspberry-Monster/amlogic-boot-fip): the new FIP repository
+- [u-boot](https://github.com/Raspberry-Monster/u-boot): the new U-Boot repository
+- [linux](https://github.com/Raspberry-Monster/linux): the new kernel tree
+
+`mibox4-dt` provides device trees for new devices. `rtw88-dt-mac` contains
+the RTW88 changes that allow the driver to obtain the MAC address from NVRAM.
+The changes from these two repositories will be cherry-picked into
+`mibox4-bringup`.
+
+The LibreELEC fork contains the device-specific changes, which will be
+submitted to [Raspberry-Monster/LibreELEC.tv](https://github.com/Raspberry-Monster/LibreELEC.tv).
+
 This repository contains LibreELEC 12.2 support for Xiaomi Mi Box 4
 (MDZ-21-AA), including the board device tree, RTL8723DS/eFuse MAC support,
 and a production Mainline U-Boot FIP integration.

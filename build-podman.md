@@ -32,11 +32,11 @@ cd ~/LibreELEC.tv
 ```
 
 The example uses the
-Ubuntu 22.04 (`jammy`) container; replace `jammy` with another directory above
+Ubuntu 24.04 (`noble`) container; replace `noble` with another directory above
 if needed.
 
 ```bash
-podman build --pull=always -t libreelec tools/docker/jammy
+podman build --pull=always -t libreelec tools/docker/noble
 ```
 
 ## Build LibreELEC inside the container
@@ -54,8 +54,12 @@ Pass build-system settings with `--env`, `-e`, or `--env-file`, for example:
 
 ```bash
 podman run --rm --log-driver none --userns=keep-id \
+  --user "$(id -u):$(id -g)" \
   -v "$(pwd)":/build -w /build -it \
-  -e PROJECT=Amlogic -e ARCH=aarch64 -e DEVICE=AMLGX -e UBOOT_SYSTEM=mibox4 \
+  -e PROJECT=Amlogic \
+  -e ARCH=aarch64 \
+  -e DEVICE=AMLGX \
+  -e UBOOT_SYSTEM=mibox4 \
   libreelec make image
 ```
 

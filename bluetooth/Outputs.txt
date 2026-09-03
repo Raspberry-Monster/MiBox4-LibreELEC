@@ -1,0 +1,6 @@
+LibreELEC:~ # ./h4_test
+UART: /dev/ttyAML6
+Config: 115200 8N1 RTS/CTS
+TX: 01 01 10 00
+RX (15 bytes): 04 0e 0c 02 01 10 00 08 0d 00 08 5d 00 23 87
+LibreELEC:~ #

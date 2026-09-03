@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+// Copyright (c) 2026 YuChia-Kan <mail@raspberrykan.dev>
 /*
  * Xiaomi Mi Box 4 (MDZ-21-AA)
  *
@@ -299,10 +300,17 @@
 	#size-cells = <0>;
 	bus-width = <4>;
 	cap-sd-highspeed;
+	cap-sdio-irq;
 	max-frequency = <50000000>;
 	non-removable;
+	no-mmc;
+	no-sd;
 	disable-wp;
 	keep-power-in-suspend;
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
 	mmc-pwrseq = <&wifi_pwrseq>;
 	vmmc-supply = <&vddao_3v3>;
 	vqmmc-supply = <&vddio_boot>;
@@ -312,8 +320,7 @@
 		nvmem-cells = <&wifi_mac>;
 		nvmem-cell-names = "mac-address";
 		interrupt-parent = <&gpio_intc>;
-		/* vendor GPIO 0x56 = GPIOX_7 = GPIO interrupt 96 */
-		interrupts = <96 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GPIOX_7 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "host-wake";
 	};
 };
